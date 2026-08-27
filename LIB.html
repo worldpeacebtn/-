@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌍 WorldPeaceBtn · Project Index</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 1.5rem;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #58a6ff, #f0883e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header .badge {
+            background: #21262d;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid #30363d;
+        }
+        .header .badge span {
+            color: #f0e6d0;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .btn-refresh {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-refresh:hover {
+            background: #2ea043;
+        }
+        .btn-refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .repo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+        .repo-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            transition: transform 0.15s ease, border-color 0.2s;
+        }
+        .repo-card:hover {
+            transform: translateY(-3px);
+            border-color: #58a6ff;
+        }
+        .repo-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .repo-card h3 a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+        .repo-card h3 a:hover {
+            text-decoration: underline;
+        }
+        .repo-card p {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .repo-card .link-type {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #21262d;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            display: inline-block;
+            color: #8b949e;
+            border: 1px solid #30363d;
+        }
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #8b949e;
+        }
+        .error {
+            background: #da3633;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85rem;
+            border-top: 1px solid #21262d;
+            padding-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 WorldPeaceBtn · Overview</h1>
+            <div class="controls">
+                <span class="badge">📦 <span id="repo-count">0</span> projects</span>
+                <button class="btn-refresh" id="refreshBtn" onclick="fetchRepos()">⟳ Refresh</button>
+            </div>
+        </div>
+
+        <div id="repoGrid" class="repo-grid">
+            <div class="loading">⏳ Loading your repositories...</div>
+        </div>
+        <div class="footer">
+            Auto-updates via GitHub API · Falls back to <code>worldpeacebtn.github.io/&lt;repo&gt;</code> if no custom link is set.
+        </div>
+    </div>
+
+    <script>
+        const USERNAME = 'worldpeacebtn';
+        const grid = document.getElementById('repoGrid');
+        const countSpan = document.getElementById('repo-count');
+        const refreshBtn = document.getElementById('refreshBtn');
+
+        async function fetchRepos() {
+            // Disable button & show loading
+            refreshBtn.disabled = true;
+            grid.innerHTML = `<div class="loading">⏳ Fetching latest repositories...</div>`;
+
+            try {
+                const response = await fetch(`https://api.github.com/users/${USERNAME}/repos?per_page=100&sort=updated&direction=desc`);
+                
+                if (!response.ok) throw new Error(`GitHub API error: ${response.status}`);
+
+                const repos = await response.json();
+
+                // Handle case where user exists but has no public repos
+                if (!Array.isArray(repos) || repos.length === 0) {
+                    grid.innerHTML = `<div class="error">⚠️ No public repositories found for ${USERNAME}.</div>`;
+                    countSpan.textContent = '0';
+                    refreshBtn.disabled = false;
+                    return;
+                }
+
+                // Filter out forks if you want (optional) – uncomment to exclude forks
+                // const filtered = repos.filter(r => !r.fork);
+                const filtered = repos; // keeps all repos
+
+                countSpan.textContent = filtered.length;
+                grid.innerHTML = '';
+
+                if (filtered.length === 0) {
+                    grid.innerHTML = `<div class="loading">✨ No repos to display (maybe all are forks?).</div>`;
+                    refreshBtn.disabled = false;
+                    return;
+                }
+
+                // Build cards
+                for (const repo of filtered) {
+                    const card = document.createElement('div');
+                    card.className = 'repo-card';
+
+                    // --- SMART LINK DETECTION ---
+                    let demoLink = repo.homepage; // This is the custom URL (Vercel, .io, custom domain)
+                    let linkType = 'Custom Link';
+
+                    // If homepage is empty OR it's the same as the repo URL OR invalid, fallback to GitHub Pages
+                    if (!demoLink || !demoLink.startsWith('http')) {
+                        demoLink = `https://${USERNAME}.github.io/${repo.name}/`;
+                        linkType = 'GitHub Pages (fallback)';
+                    } else {
+                        // Detect if it's a known platform just for the badge
+                        if (demoLink.includes('vercel.app')) linkType = 'Vercel';
+                        else if (demoLink.includes('.io')) linkType = '.io Domain';
+                        else if (demoLink.includes('netlify.app')) linkType = 'Netlify';
+                        else linkType = 'Custom Domain';
+                    }
+
+                    // Description fallback
+                    const description = repo.description || 'No description provided.';
+
+                    card.innerHTML = `
+                        <h3><a href="${demoLink}" target="_blank" rel="noopener noreferrer">${repo.name}</a></h3>
+                        <p>${description}</p>
+                        <span class="link-type">🔗 ${linkType}</span>
+                    `;
+
+                    grid.appendChild(card);
+                }
+
+            } catch (error) {
+                console.error(error);
+                grid.innerHTML = `<div class="error">❌ Failed to load repos: ${error.message}. Please refresh or check your network.</div>`;
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // Auto-fetch on page load
+        fetchRepos();
+    </script>
+</body>
+</html>
