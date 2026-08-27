@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌍 WorldPeaceBtn · App Folder Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0b0e14;
+            color: #e6edf3;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* HEADER */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid #2d333b;
+            padding-bottom: 1.5rem;
+        }
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(145deg, #f0883e, #f6a85b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header h1 span {
+            background: #1c2128;
+            padding: 0 12px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            color: #768390;
+            -webkit-text-fill-color: #768390;
+            border: 1px solid #30363d;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .badge {
+            background: #1c2128;
+            padding: 0.4rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            border: 1px solid #30363d;
+        }
+        .btn-refresh {
+            background: #2d7a3a;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+        }
+        .btn-refresh:hover {
+            background: #3fb950;
+            transform: scale(1.02);
+        }
+        .btn-refresh:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* GRID */
+        .repo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* REPO CARD - FOLDER STYLE */
+        .repo-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 18px;
+            padding: 1.2rem 1.5rem 1.5rem;
+            transition: 0.25s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .repo-card:hover {
+            border-color: #58a6ff;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(88, 166, 255, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+        }
+        .folder-icon {
+            font-size: 1.5rem;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+        .card-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-header h3 a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+        .card-header h3 a:hover {
+            text-decoration: underline;
+        }
+
+        .toggle-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            border-radius: 8px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s;
+            flex-shrink: 0;
+        }
+        .toggle-btn:hover {
+            background: #30363d;
+            color: #f0f6fc;
+        }
+        .toggle-btn.open {
+            background: #1f6feb;
+            border-color: #1f6feb;
+            color: white;
+        }
+
+        .repo-desc {
+            font-size: 0.85rem;
+            color: #8b949e;
+            margin: 0.5rem 0 0.8rem 0;
+            padding-left: 2px;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .link-type-badge {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            background: #1c2128;
+            padding: 0.15rem 0.7rem;
+            border-radius: 30px;
+            color: #768390;
+            border: 1px solid #2d333b;
+            display: inline-block;
+            margin-top: 2px;
+        }
+
+        /* SUB FILES (HTML LIST) */
+        .sub-files-container {
+            margin-top: 1rem;
+            padding-top: 0.8rem;
+            border-top: 1px dashed #2d333b;
+            display: none;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .sub-files-container.open {
+            display: flex;
+        }
+        .sub-loading {
+            color: #768390;
+            font-size: 0.85rem;
+            width: 100%;
+            padding: 8px 0;
+        }
+
+        .html-file-btn {
+            background: #1c2333;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 0.4rem 1.2rem 0.4rem 1rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .html-file-btn:hover {
+            background: #2d7a3a;
+            border-color: #3fb950;
+            color: white;
+            transform: scale(1.04);
+        }
+        .html-file-btn .file-emoji {
+            font-size: 1rem;
+        }
+        .html-file-btn .file-name {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .no-files-msg {
+            color: #484f58;
+            font-size: 0.8rem;
+            font-style: italic;
+            width: 100%;
+        }
+
+        /* MODAL PREVIEW */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            animation: fadeIn 0.25s ease;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 24px;
+            width: 95%;
+            height: 92vh;
+            max-width: 1400px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1.5rem;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            flex-shrink: 0;
+        }
+        .modal-header span {
+            font-weight: 500;
+            color: #c9d1d9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .modal-header span small {
+            color: #768390;
+            font-weight: 400;
+            font-size: 0.75rem;
+        }
+        .modal-close {
+            background: #21262d;
+            border: none;
+            color: #c9d1d9;
+            width: 32px;
+            height: 32px;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-close:hover {
+            background: #da3633;
+            color: white;
+        }
+        .modal-body {
+            flex: 1;
+            background: #ffffff;
+            position: relative;
+        }
+        .modal-body iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.8rem;
+            border-top: 1px solid #21262d;
+            padding-top: 1.5rem;
+        }
+
+        /* error & loading states */
+        .loading, .error {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: #8b949e;
+        }
+        .error {
+            color: #f0883e;
+        }
+        code {
+            background: #1c2128;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            color: #f6a85b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                📂 WorldPeaceBtn
+                <span>Hub</span>
+            </h1>
+            <div class="controls">
+                <span class="badge">📦 <span id="repo-count">0</span> projects</span>
+                <button class="btn-refresh" id="refreshBtn" onclick="fetchRepos()">⟳ Refresh</button>
+            </div>
+        </div>
+
+        <div id="repoGrid" class="repo-grid">
+            <div class="loading">⏳ Loading your app folders...</div>
+        </div>
+        <div class="footer">
+            Click <strong>▶</strong> to open a folder & discover all HTML files. Click any file button to preview it live.
+        </div>
+    </div>
+
+    <!-- PREVIEW MODAL -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="modalTitle">📄 Preview <small id="modalSubtitle"></small></span>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <iframe id="previewIframe" src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const USERNAME = 'worldpeacebtn';
+        const grid = document.getElementById('repoGrid');
+        const countSpan = document.getElementById('repo-count');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const modal = document.getElementById('previewModal');
+        const iframe = document.getElementById('previewIframe');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalSubtitle = document.getElementById('modalSubtitle');
+
+        // --- CORE: Fetch repos ---
+        async function fetchRepos() {
+            refreshBtn.disabled = true;
+            grid.innerHTML = `<div class="loading">⏳ Fetching latest repositories...</div>`;
+
+            try {
+                const response = await fetch(`https://api.github.com/users/${USERNAME}/repos?per_page=100&sort=updated&direction=desc`);
+                if (!response.ok) throw new Error(`GitHub API error: ${response.status}`);
+                const repos = await response.json();
+
+                if (!Array.isArray(repos) || repos.length === 0) {
+                    grid.innerHTML = `<div class="error">⚠️ No public repositories found.</div>`;
+                    countSpan.textContent = '0';
+                    refreshBtn.disabled = false;
+                    return;
+                }
+
+                countSpan.textContent = repos.length;
+                grid.innerHTML = '';
+
+                for (const repo of repos) {
+                    const card = document.createElement('div');
+                    card.className = 'repo-card';
+                    card.dataset.repoName = repo.name;
+
+                    // Determine base URL for previews
+                    let baseUrl = repo.homepage;
+                    let linkType = 'Custom Link';
+                    if (!baseUrl || !baseUrl.startsWith('http')) {
+                        baseUrl = `https://${USERNAME}.github.io/${repo.name}`;
+                        linkType = 'GitHub Pages';
+                    } else {
+                        if (baseUrl.includes('vercel.app')) linkType = 'Vercel';
+                        else if (baseUrl.includes('.io')) linkType = '.io Domain';
+                        else if (baseUrl.includes('netlify.app')) linkType = 'Netlify';
+                        else linkType = 'Custom';
+                    }
+                    // remove trailing slash
+                    baseUrl = baseUrl.replace(/\/+$/, '');
+
+                    const description = repo.description || '';
+
+                    card.innerHTML = `
+                        <div class="card-header" onclick="toggleRepo('${repo.name}', this.closest('.repo-card'))">
+                            <div class="card-header-left">
+                                <span class="folder-icon">📁</span>
+                                <h3><a href="${repo.html_url}" target="_blank">${repo.name}</a></h3>
+                            </div>
+                            <button class="toggle-btn" id="toggle-${repo.name}">▶</button>
+                        </div>
+                        <div class="repo-desc">${description}</div>
+                        <span class="link-type-badge">🔗 ${linkType}</span>
+                        <div class="sub-files-container" id="sub-${repo.name}">
+                            <div class="sub-loading">📂 Click ▶ to scan for HTML files...</div>
+                        </div>
+                    `;
+
+                    // Store baseUrl in the container for later use
+                    const subContainer = card.querySelector('.sub-files-container');
+                    subContainer.dataset.baseUrl = baseUrl;
+                    subContainer.dataset.loaded = 'false';
+
+                    grid.appendChild(card);
+                }
+
+            } catch (error) {
+                grid.innerHTML = `<div class="error">❌ Failed: ${error.message}</div>`;
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // --- TOGGLE REPO (Open/Close Folder) ---
+        async function toggleRepo(repoName, cardElement) {
+            const container = document.getElementById(`sub-${repoName}`);
+            const toggleBtn = document.getElementById(`toggle-${repoName}`);
+            const folderIcon = cardElement.querySelector('.folder-icon');
+
+            if (!container) return;
+
+            // If it's already open, just close it
+            if (container.classList.contains('open')) {
+                container.classList.remove('open');
+                toggleBtn.classList.remove('open');
+                toggleBtn.textContent = '▶';
+                folderIcon.textContent = '📁';
+                return;
+            }
+
+            // Open it
+            container.classList.add('open');
+            toggleBtn.classList.add('open');
+            toggleBtn.textContent = '▼';
+            folderIcon.textContent = '📂';
+
+            // Check if already loaded
+            if (container.dataset.loaded === 'true') return;
+
+            // Load the files
+            container.innerHTML = `<div class="sub-loading">⏳ Scanning for .html files...</div>`;
+            const baseUrl = container.dataset.baseUrl;
+
+            try {
+                const apiUrl = `https://api.github.com/repos/${USERNAME}/${repoName}/contents/`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    // 404 or forbidden
+                    container.innerHTML = `<span class="no-files-msg">⚠️ Cannot fetch contents (repo might be empty).</span>`;
+                    container.dataset.loaded = 'true';
+                    return;
+                }
+
+                const files = await response.json();
+                if (!Array.isArray(files)) {
+                    container.innerHTML = `<span class="no-files-msg">📭 No files found in root.</span>`;
+                    container.dataset.loaded = 'true';
+                    return;
+                }
+
+                // Filter for .html (and .htm) files
+                const htmlFiles = files.filter(f => 
+                    f.type === 'file' && 
+                    (f.name.endsWith('.html') || f.name.endsWith('.htm'))
+                );
+
+                if (htmlFiles.length === 0) {
+                    container.innerHTML = `<span class="no-files-msg">📭 No .html files in this root.</span>`;
+                    container.dataset.loaded = 'true';
+                    return;
+                }
+
+                // Clear loading
+                container.innerHTML = '';
+
+                // Build buttons for each HTML file
+                htmlFiles.forEach(file => {
+                    const btn = document.createElement('button');
+                    btn.className = 'html-file-btn';
+                    // Construct full preview URL: baseUrl + path (e.g., /src/index.html)
+                    const filePath = file.path;
+                    const previewUrl = `${baseUrl}/${filePath}`;
+                    
+                    btn.innerHTML = `<span class="file-emoji">🌐</span><span class="file-name">${file.name}</span>`;
+                    btn.title = `Preview ${file.name}`;
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        openModal(file.name, previewUrl, repoName);
+                    };
+                    container.appendChild(btn);
+                });
+
+                container.dataset.loaded = 'true';
+
+            } catch (err) {
+                container.innerHTML = `<span class="no-files-msg">❌ Error loading files: ${err.message}</span>`;
+                container.dataset.loaded = 'true';
+            }
+        }
+
+        // --- MODAL LOGIC ---
+        function openModal(fileName, url, repoName) {
+            modal.classList.add('active');
+            iframe.src = url;
+            modalTitle.innerHTML = `📄 ${fileName}`;
+            modalSubtitle.textContent = `from ${repoName}`;
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            iframe.src = 'about:blank';
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Close modal with ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // --- INIT ---
+        fetchRepos();
+    </script>
+</body>
+</html>
