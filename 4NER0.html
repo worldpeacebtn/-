@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>LIBRA · Holo Rabbit OS</title>
+<style>
+:root{
+  --o:#ff8a1f; --y:#ffd23f; --w:#fff6ea; --neon:#ffb057;
+  --r:44px; --pulse:.35;
+  --glass:rgba(255,255,255,.16);
+  --stroke:rgba(255,255,255,.55);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;background:#2a1200;
+  font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:#3a1e00;overscroll-behavior:none;touch-action:manipulation}
+
+/* ---------- BACKGROUND ---------- */
+#bg{position:fixed;inset:0;z-index:0;
+  background:radial-gradient(130% 100% at 25% 0%,#fffaf2 0%,#ffe9a8 22%,#ffc93f 48%,#ff8a1f 76%,#ff6a00 100%);
+  transition:filter .6s}
+.cloud{position:fixed;z-index:1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,255,255,.98),rgba(255,255,255,0) 72%);
+  filter:blur(10px);will-change:transform;opacity:.8}
+#grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.16;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='.85'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
+
+/* ---------- LED THERAPY FRAME ---------- */
+#frame{position:fixed;inset:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right))
+  max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+  z-index:8;pointer-events:none;border-radius:calc(var(--r) + 18px);
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,.6),
+    inset 0 0 34px rgba(255,170,80,calc(var(--pulse)*1.1)),
+    inset 0 0 90px rgba(255,120,20,calc(var(--pulse)*.5)),
+    0 0 70px rgba(255,150,60,calc(var(--pulse)*.9));
+  transition:box-shadow .25s linear}
+#frame::after{content:"";position:absolute;inset:-2px;border-radius:inherit;
+  background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.5),transparent 40%);
+  animation:spin 9s linear infinite;opacity:.5;mix-blend-mode:screen}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- DEVICE ---------- */
+#device{position:fixed;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(93vw,430px);height:min(86vh,900px);border-radius:var(--r);overflow:hidden;
+  background:linear-gradient(160deg,rgba(255,255,255,.5),rgba(255,255,255,.14));
+  backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+  box-shadow:0 30px 80px rgba(120,50,0,.45),inset 0 1px 0 rgba(255,255,255,.7);
+  display:flex;flex-direction:column}
+@media (orientation:landscape){#device{width:min(78vw,900px);height:min(80vh,470px);--r:36px}}
+
+#topbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 14px 6px;
+  font-size:13px;font-weight:700;letter-spacing:.4px;color:#5a2c00}
+#topbar .dot{width:8px;height:8px;border-radius:50%;background:#ff7a1a;box-shadow:0 0 10px #ff9a3c}
+#topbar .spacer{flex:1}
+
+/* ---------- APP GRID ---------- */
+#grid{flex:1;overflow-y:auto;overflow-x:hidden;scroll-snap-type:y proximity;
+  -webkit-overflow-scrolling:touch;padding:8px 12px 120px;
+  display:grid;gap:12px;grid-template-columns:repeat(2,1fr);align-content:start}
+@media (orientation:landscape){#grid{grid-template-columns:repeat(4,1fr)}}
+@media (min-width:700px) and (orientation:portrait){#grid{grid-template-columns:repeat(3,1fr)}}
+
+.tile{scroll-snap-align:start;position:relative;aspect-ratio:9/14;border-radius:22px;
+  overflow:hidden;border:1.5px solid var(--stroke);background:var(--glass);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;font-size:44px;
+  box-shadow:0 8px 24px rgba(140,60,0,.22),inset 0 1px 0 rgba(255,255,255,.6);
+  transition:transform .18s,box-shadow .18s;cursor:pointer;user-select:none}
+.tile:active{transform:scale(.96)}
+.tile .prev{position:absolute;inset:0;object-fit:cover;width:100%;height:100%}
+.tile .label{position:absolute;left:0;right:0;bottom:0;padding:6px 8px;font-size:11px;
+  font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(90,40,0,.75));
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .kill{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+  background:rgba(0,0,0,.45);color:#fff;font-size:13px;line-height:22px;text-align:center;display:none}
+body.edit .tile .kill{display:block}
+.tile.add{border-style:dashed;font-size:30px;opacity:.75}
+
+/* ---------- STAGE (stickers / bubbles) ---------- */
+#stage{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+body.edit #stage{pointer-events:auto;background:rgba(255,255,255,.06)}
+.item{position:absolute;pointer-events:auto;touch-action:none;transform-origin:center}
+.item img{width:100%;height:100%;object-fit:contain;pointer-events:none;display:block}
+.item .emo{font-size:100%;line-height:1}
+.bubble{padding:8px 12px;border-radius:16px;background:rgba(255,255,255,.85);
+  border:2px solid rgba(255,255,255,.9);box-shadow:0 6px 18px rgba(140,60,0,.25);
+  font-size:13px;font-weight:600;color:#4a2400;max-width:60vw}
+body.edit .item{outline:1.5px dashed rgba(255,120,20,.8);outline-offset:3px}
+
+/* ---------- EDIT PANEL ---------- */
+#panel{position:absolute;z-index:20;left:8px;right:8px;bottom:8px;display:none;
+  padding:10px 12px;border-radius:20px;background:rgba(255,255,255,.9);
+  backdrop-filter:blur(18px);box-shadow:0 10px 30px rgba(120,50,0,.35);
+  font-size:12px;font-weight:600;color:#4a2400}
+body.edit #panel.on{display:block}
+#panel .row{display:flex;align-items:center;gap:8px;margin:5px 0}
+#panel input[type=range]{flex:1;accent-color:#ff8a1f}
+#panel button{border:0;border-radius:12px;padding:7px 11px;font:inherit;font-weight:700;
+  background:linear-gradient(180deg,#ffd23f,#ff8a1f);color:#4a2400}
+
+/* ---------- MUSIC DOCK ---------- */
+#dock{position:fixed;z-index:9;left:50%;bottom:max(14px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);width:min(93vw,430px);height:52px;border-radius:26px;
+  display:flex;align-items:center;gap:8px;padding:0 10px;
+  background:rgba(255,255,255,.34);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1.5px solid var(--stroke);box-shadow:0 12px 34px rgba(120,50,0,.3);
+  touch-action:pan-x}
+@media (orientation:landscape){#dock{width:min(78vw,900px)}}
+#dock .cov{width:36px;height:36px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;
+  font-size:19px;background:linear-gradient(140deg,#fff3d0,#ffb057);box-shadow:inset 0 1px 0 #fff}
+#dock .meta{flex:1;min-width:0;line-height:1.15}
+#dock .meta b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dock .meta span{font-size:10px;opacity:.7}
+#dock button{border:0;background:transparent;font-size:19px;padding:4px 6px;cursor:pointer;color:#4a2400}
+#dock .seek{position:absolute;left:10px;right:10px;bottom:4px;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.5);overflow:hidden}
+#dock .seek i{display:block;height:100%;width:0;background:#ff7a1a}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;z-index:10;top:max(12px,env(safe-area-inset-top));left:50%;
+  transform:translateX(-50%);display:flex;gap:8px}
+#hud button{border:1.5px solid var(--stroke);background:rgba(255,255,255,.4);
+  backdrop-filter:blur(16px);border-radius:16px;padding:8px 12px;font:inherit;
+  font-size:12px;font-weight:700;color:#4a2400;cursor:pointer}
+#hud button.on{background:linear-gradient(180deg,#ffd23f,#ff8a1f);color:#fff}
+
+/* ---------- CHARACTER CARD ---------- */
+#card{position:fixed;z-index:30;inset:0;display:none;place-items:center;
+  background:rgba(60,20,0,.45);backdrop-filter:blur(8px)}
+#card.on{display:grid}
+.holo{width:min(84vw,330px);aspect-ratio:5/7;border-radius:28px;position:relative;
+  background:linear-gradient(150deg,rgba(150,90,255,.5),rgba(255,255,255,.18));
+  border:1.5px solid rgba(220,190,255,.8);backdrop-filter:blur(20px);
+  box-shadow:0 0 60px rgba(150,90,255,.55),inset 0 1px 0 rgba(255,255,255,.7);
+  padding:16px;display:flex;flex-direction:column;gap:10px;color:#fff}
+.holo .suit{position:absolute;top:10px;font-size:22px;opacity:.9}
+.holo .suit.l{left:14px}.holo .suit.r{right:14px;transform:rotate(180deg)}
+.holo .pic{flex:0 0 46%;border-radius:18px;overflow:hidden;background:rgba(255,255,255,.15);
+  display:grid;place-items:center;font-size:56px}
+.holo .pic img{width:100%;height:100%;object-fit:cover}
+.holo textarea{flex:1;width:100%;border:0;border-radius:14px;padding:10px;resize:none;
+  font:inherit;font-size:12px;background:rgba(255,255,255,.18);color:#fff}
+.holo textarea::placeholder{color:rgba(255,255,255,.6)}
+.holo .bar{display:flex;gap:8px}
+.holo button{flex:1;border:0;border-radius:14px;padding:10px;font:inherit;font-weight:700;
+  cursor:pointer;background:rgba(255,255,255,.85);color:#4a1e6b}
+
+#toast{position:fixed;z-index:40;left:50%;bottom:80px;transform:translateX(-50%);
+  padding:10px 16px;border-radius:14px;background:rgba(60,25,0,.85);color:#fff;
+  font-size:12px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<div id="grain"></div>
+
+<div id="frame"></div>
+
+<div id="device">
+  <div id="topbar">
+    <span class="dot"></span><span>LIBRA · HOLO RABBIT</span>
+    <span class="spacer"></span>
+    <span id="clock">--:--</span>
+  </div>
+
+  <!-- ▼▼▼ DROP YOUR EXISTING APP HERE ▼▼▼
+       Option A (safe sandbox):
+       <iframe id="slot" src="LIBRA.html" style="position:absolute;inset:0;border:0;z-index:3"></iframe>
+       Option B (inline): paste your whole app body inside this div.
+  -->
+  <div id="slot" style="position:absolute;inset:0;z-index:3;display:none"></div>
+
+  <div id="grid"></div>
+  <div id="stage"></div>
+
+  <div id="panel">
+    <div class="row"><span id="psel">—</span><span class="spacer" style="flex:1"></span>
+      <button id="pdel">🗑</button></div>
+    <div class="row">size<input id="psize" type="range" min="10" max="90" value="30"></div>
+    <div class="row">rot <input id="prot" type="range" min="-180" max="180" value="0"></div>
+    <div class="row">t0 <input id="pt0" type="range" min="0" max="60" value="0">
+                     t1 <input id="pt1" type="range" min="0" max="60" value="6"></div>
+  </div>
+</div>
+
+<div id="dock">
+  <div class="cov" id="cov">🐰</div>
+  <div class="meta"><b id="title">no track</b><span id="sub">tap + to load audio</span></div>
+  <button id="prev">⏮</button>
+  <button id="play">▶</button>
+  <button id="next">⏭</button>
+  <button id="addm">＋</button>
+  <div class="seek"><i id="bar"></i></div>
+</div>
+
+<div id="hud">
+  <button id="bEdit">✎ edit</button>
+  <button id="bSticker">🧡 sticker</button>
+  <button id="bBubble">💬 note</button>
+  <button id="bChar">♥♠ char</button>
+  <button id="bSave">⤓ save</button>
+  <button id="bLoad">⤒ load</button>
+</div>
+
+<div id="card">
+  <div class="holo">
+    <div class="suit l">♥</div><div class="suit r">♠</div>
+    <div class="pic" id="cPic">🐰</div>
+    <textarea id="cTxt" placeholder="Name · role · voice · secret…"></textarea>
+    <div class="bar">
+      <button id="cImg">🖼 pic</button>
+      <button id="cSave">save</button>
+      <button id="cClose">close</button>
+    </div>
+  </div>
+</div>
+
+<audio id="au"></audio>
+<input id="fMedia" type="file" multiple accept="*/*" hidden>
+<input id="fAudio" type="file" multiple accept="audio/*" hidden>
+<input id="fLoad"  type="file" accept=".json,.zip" hidden>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+/* ============================================================
+   LIBRA HOLO RABBIT OS — shell v0.1
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const state = { apps: [], items: [], playlist: [], ti: 0, sel: null };
+const toast = t => { const e=$('#toast'); e.textContent=t; e.classList.add('on');
+  clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),1800); };
+
+/* ---------- 1. PARALLAX CLOUD RABBIT ---------- */
+const clouds=[];
+for(let i=0;i<9;i++){
+  const c=document.createElement('div'); c.className='cloud';
+  const s=180+Math.random()*380;
+  c.style.width=s+'px'; c.style.height=s*0.55+'px';
+  c.style.left=(Math.random()*120-10)+'vw';
+  c.style.top=(Math.random()*100)+'vh';
+  c.style.opacity=(.35+Math.random()*.5).toFixed(2);
+  document.body.appendChild(c);
+  clouds.push({el:c, sp:.06+Math.random()*.22, base:Math.random()*1000});
+}
+/* bunny ears silhouette (pure CSS, sits behind clouds) */
+const ears=document.createElement('div');
+ears.style.cssText='position:fixed;z-index:0;left:50%;top:-4vh;transform:translateX(-50%);'+
+ 'width:min(70vw,520px);height:40vh;pointer-events:none;opacity:.35;filter:blur(2px);'+
+ 'background:radial-gradient(ellipse 22% 78% at 34% 70%,rgba(255,255,255,.95),transparent 70%),'+
+ 'radial-gradient(ellipse 22% 78% at 66% 70%,rgba(255,255,255,.95),transparent 70%),'+
+ 'radial-gradient(ellipse 46% 46% at 50% 96%,rgba(255,255,255,.9),transparent 72%)';
+document.body.appendChild(ears);
+
+let sy=0, cy=0;
+function onScroll(y){ sy=y; }
+$('#grid').addEventListener('scroll',e=>onScroll(e.target.scrollTop),{passive:true});
+addEventListener('scroll',()=>onScroll(scrollY),{passive:true});
+(function loop(){
+  cy += (sy-cy)*0.08;
+  clouds.forEach(c=>{ c.el.style.transform=`translate3d(0,${(-cy*c.sp - (performance.now()*0.004*c.sp*10)%200)}px,0)`; });
+  requestAnimationFrame(loop);
+})();
+
+/* ---------- 2. APP GRID ---------- */
+const SEED=[
+  {id:'a1',name:'Story Board',emoji:'📖'},
+  {id:'a2',name:'Chats',emoji:'💬'},
+  {id:'a3',name:'Music Lab',emoji:'🎧'},
+  {id:'a4',name:'Sticker Forge',emoji:'🧡'},
+  {id:'a5',name:'Time Tunnel',emoji:'🌀'},
+  {id:'a6',name:'Boss Room',emoji:'👑'},
+];
+state.apps = JSON.parse(localStorage.getItem('libra.apps')||'null') || SEED;
+
+function renderGrid(){
+  const g=$('#grid'); g.innerHTML='';
+  state.apps.forEach((a,i)=>{
+    const t=document.createElement('div'); t.className='tile'; t.dataset.i=i;
+    if(a.preview){ t.appendChild(makePreview(a.preview)); }
+    else { t.textContent = a.emoji || '🐰'; }
+    const l=document.createElement('div'); l.className='label'; l.textContent=a.name; t.appendChild(l);
+    const k=document.createElement('div'); k.className='kill'; k.textContent='×';
+    k.onclick=e=>{ e.stopPropagation(); state.apps.splice(i,1); persist(); renderGrid(); };
+    t.appendChild(k);
+    t.onclick=()=>{
+      if(!a.preview) return toast('no preview — tap ✎ edit then upload');
+      openPreview(a);
+    };
+    g.appendChild(t);
+  });
+  const add=document.createElement('div'); add.className='tile add'; add.textContent='＋';
+  add.onclick=()=>$('#fMedia').click();
+  g.appendChild(add);
+}
+function makePreview(p){
+  if(p.kind==='image'){ const i=new Image(); i.className='prev'; i.src=p.url; return i; }
+  if(p.kind==='video'){ const v=document.createElement('video'); v.className='prev';
+    v.src=p.url; v.muted=true; v.playsInline=true; v.autoplay=true; v.loop=true; return v; }
+  const d=document.createElement('div'); d.className='prev';
+  d.style.cssText='display:grid;place-items:center;background:linear-gradient(150deg,#fff3d0,#ffb057);font-size:40px';
+  d.textContent = p.kind==='audio'?'🎵':p.kind==='pdf'?'📄':p.kind==='text'?'📝':'📦';
+  return d;
+}
+function persist(){ try{ localStorage.setItem('libra.apps', JSON.stringify(
+  state.apps.map(a=>({id:a.id,name:a.name,emoji:a.emoji, preview:a.preview?{kind:a.preview.kind,name:a.preview.name}:null}))
+)); }catch(e){} }
+renderGrid();
+
+function openPreview(a){
+  const w=window.open('','_blank');
+  if(!w) return toast('popup blocked');
+  const p=a.preview;
+  w.document.write(p.kind==='image'?`<img src="${p.url}" style="max-width:100%">`
+    : p.kind==='video'?`<video src="${p.url}" controls autoplay style="max-width:100%"></video>`
+    : p.kind==='audio'?`<audio src="${p.url}" controls autoplay style="width:100%"></audio>`
+    : `<iframe src="${p.url}" style="position:fixed;inset:0;border:0;width:100%;height:100%"></iframe>`);
+  w.document.title=a.name;
+}
+
+/* media upload → new tile */
+$('#fMedia').onchange = e => {
+  [...e.target.files].forEach((f,i)=>{
+    const url=URL.createObjectURL(f);
+    const kind = f.type.startsWith('image')?'image'
+              : f.type.startsWith('video')?'video'
+              : f.type.startsWith('audio')?'audio'
+              : f.type==='application/pdf'?'pdf'
+              : f.type.startsWith('text')?'text':'file';
+    state.apps.push({ id:'u'+Date.now()+i, name:f.name.slice(0,22), emoji:'🐰',
+                      preview:{kind, url, name:f.name, blob:f} });
+  });
+  renderGrid(); persist(); toast(e.target.files.length+' added');
+  e.target.value='';
+};
+
+/* ---------- 3. EDIT MODE + STAGE ---------- */
+let edit=false, mode='move';
+function setEdit(v){ edit=v; document.body.classList.toggle('edit',v);
+  $('#bEdit').classList.toggle('on',v); }
+$('#bEdit').onclick=()=>setEdit(!edit);
+$('#bSticker').onclick=()=>{ mode='sticker'; setEdit(true); toast('tap stage to drop sticker'); };
+$('#bBubble').onclick =()=>{ mode='bubble';  setEdit(true); toast('tap stage to add note'); };
+
+$('#stage').addEventListener('pointerdown', e=>{
+  if(!edit || e.target!==$('#stage')) return;
+  const r=$('#stage').getBoundingClientRect();
+  const x=((e.clientX-r.left)/r.width*100).toFixed(2);
+  const y=((e.clientY-r.top)/r.height*100).toFixed(2);
+  if(mode==='sticker') addItem({type:'emoji', v:'🐰', x, y, size:14, rot:0, t0:0, t1:6});
+  if(mode==='bubble')  addItem({type:'bubble', v:'new note…', x, y, size:14, rot:0, t0:0, t1:6});
+});
+function addItem(o){
+  o.id='i'+Date.now()+Math.random().toString(36).slice(2,5);
+  state.items.push(o); renderItems(); persist();
+}
+function renderItems(){
+  const s=$('#stage'); s.innerHTML='';
+  state.items.forEach(o=>{
+    const d=document.createElement('div'); d.className='item'; d.dataset.id=o.id;
+    d.style.left=o.x+'%'; d.style.top=o.y+'%';
+    d.style.width=o.size+'%'; d.style.transform=`translate(-50%,-50%) rotate(${o.rot}deg)`;
+    if(o.type==='bubble'){
+      d.innerHTML=`<div class="bubble" style="font-size:${o.size*0.9}px">${esc(o.v)}</div>`;
+      d.style.width='auto';
+    } else if(o.src){
+      d.innerHTML=`<img src="${o.src}">`;
+    } else {
+      d.innerHTML=`<div class="emo" style="font-size:${o.size*3}px">${o.v||'🐰'}</div>`;
+      d.style.width='auto';
+    }
+    dragify(d,o);
+    d.onpointerdown = ev => { selectItem(o); };
+    s.appendChild(d);
+  });
+}
+function esc(s){ return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+function dragify(el,o){
+  let sx,sy,ox,oy,on=false;
+  el.addEventListener('pointerdown',e=>{
+    if(!edit) return;
+    on=true; el.setPointerCapture(e.pointerId);
+    const r=$('#stage').getBoundingClientRect();
+    sx=e.clientX; sy=e.clientY; ox=parseFloat(o.x); oy=parseFloat(o.y);
+    el._r=r;
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!on) return;
+    const r=el._r;
+    o.x=(ox+(e.clientX-sx)/r.width*100).toFixed(2);
+    o.y=(oy+(e.clientY-sy)/r.height*100).toFixed(2);
+    el.style.left=o.x+'%'; el.style.top=o.y+'%';
+  });
+  el.addEventListener('pointerup',e=>{ on=false; persist(); });
+}
+function selectItem(o){
+  state.sel=o; $('#panel').classList.add('on');
+  $('#psel').textContent = o.type+' '+o.id.slice(-3);
+  $('#psize').value=o.size; $('#prot').value=o.rot; $('#pt0').value=o.t0; $('#pt1').value=o.t1;
+}
+['psize','prot','pt0','pt1'].forEach(id=>{
+  $('#'+id).oninput = e => {
+    const o=state.sel; if(!o) return;
+    const k={psize:'size',prot:'rot',pt0:'t0',pt1:'t1'}[id];
+    o[k]=parseFloat(e.target.value); renderItems(); selectItem(o); persist();
+  };
+});
+$('#pdel').onclick=()=>{ state.items=state.items.filter(x=>x!==state.sel);
+  state.sel=null; $('#panel').classList.remove('on'); renderItems(); persist(); };
+
+/* ---------- 4. MUSIC DOCK ---------- */
+const au=$('#au'); let ac=null, an=null, src=null;
+$('#addm').onclick=()=>$('#fAudio').click();
+$('#fAudio').onchange=e=>{
+  [...e.target.files].forEach(f=>state.playlist.push({name:f.name, url:URL.createObjectURL(f)}));
+  if(state.playlist.length && !au.src) load(0);
+  toast(state.playlist.length+' tracks');
+  e.target.value='';
+};
+function load(i){
+  if(!state.playlist.length) return;
+  state.ti=(i+state.playlist.length)%state.playlist.length;
+  const t=state.playlist[state.ti];
+  au.src=t.url; $('#title').textContent=t.name.replace(/\.[^.]+$/,'');
+  $('#sub').textContent=(state.ti+1)+' / '+state.playlist.length;
+  $('#cov').textContent=['🐰','🧡','✨','🌙','🍊'][state.ti%5];
+}
+$('#play').onclick=()=>{
+  if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)();
+    src=ac.createMediaElementSource(au); an=ac.createAnalyser(); an.fftSize=64;
+    src.connect(an); an.connect(ac.destination); pulse(); }catch(e){} }
+  if(au.paused){ au.play(); $('#play').textContent='⏸'; } else { au.pause(); $('#play').textContent='▶'; }
+};
+$('#next').onclick=()=>{ load(state.ti+1); au.play(); $('#play').textContent='⏸'; };
+$('#prev').onclick=()=>{ load(state.ti-1); au.play(); $('#play').textContent='⏸'; };
+au.ontimeupdate=()=>{ if(au.duration) $('#bar').style.width=(au.currentTime/au.duration*100)+'%'; };
+au.onended=()=>$('#next').click();
+/* swipe sideways to skip — thumb nexus */
+let dx0=null;
+$('#dock').addEventListener('pointerdown',e=>dx0=e.clientX);
+$('#dock').addEventListener('pointerup',e=>{
+  if(dx0===null) return; const d=e.clientX-dx0; dx0=null;
+  if(d<-50) $('#next').click(); else if(d>50) $('#prev').click();
+});
+/* LED frame breathes with the music */
+function pulse(){
+  const d=new Uint8Array(an.frequencyBinCount);
+  (function f(){
+    an.getByteFrequencyData(d);
+    const avg=d.reduce((a,b)=>a+b,0)/d.length/255;
+    document.documentElement.style.setProperty('--pulse',(0.2+avg*0.9).toFixed(3));
+    requestAnimationFrame(f);
+  })();
+}
+
+/* ---------- 5. CHARACTER CARD ---------- */
+$('#bChar').onclick=()=>$('#card').classList.add('on');
+$('#cClose').onclick=()=>$('#card').classList.remove('on');
+$('#cImg').onclick=()=>{ const i=document.createElement('input'); i.type='file'; i.accept='image/*';
+  i.onchange=()=>{ const f=i.files[0]; if(!f) return;
+    $('#cPic').innerHTML=`<img src="${URL.createObjectURL(f)}">`; }; i.click(); };
+$('#cSave').onclick=()=>{
+  const t=$('#cTxt').value.trim()||'unnamed';
+  state.apps.push({id:'c'+Date.now(), name:t.split('\n')[0].slice(0,20), emoji:'♥',
+    preview:{kind:'image', url:$('#cPic').querySelector('img')?.src||'', name:t}});
+  $('#card').classList.remove('on'); renderGrid(); persist(); toast('character saved');
+};
+
+/* ---------- 6. EXPORT / IMPORT  (X0Y1Z2 naming) ---------- */
+function coords(i){ const X=i%9, Y=Math.floor(i/9)%9, Z=Math.floor(i/81); return `X${X}Y${Y}Z${Z}`; }
+
+$('#bSave').onclick=async()=>{
+  const files=[], manifest=[];
+  state.apps.forEach((a,i)=>{
+    const key=coords(i);
+    const rec={ [key]: { label:a.emoji, name:a.name, file:null, kind:a.preview?.kind||'none' } };
+    if(a.preview?.blob){ const fn=`${key}_${a.preview.name}`; rec[key].file=fn;
+      files.push({fn, blob:a.preview.blob}); }
+    manifest.push(rec);
+  });
+  const items = state.items.map((o,i)=>({ [coords(i)]: {type:o.type, v:o.v, x:o.x, y:o.y,
+    size:o.size, rot:o.rot, t0:o.t0, t1:o.t1} }));
+  const json = { format:'LIBRA-XYZ', version:'0.1', saved:new Date().toISOString(),
+    legend:{ rabbit:'tile', fish:'sticker', bird:'note' }, apps:manifest, stage:items };
+
+  if(!window.JSZip){ download('LIBRA.json', JSON.stringify(json,null,1)); return toast('JSZip offline → json only'); }
+  const zip=new JSZip();
+  zip.file('LIBRA.json', JSON.stringify(json,null,1));
+  files.forEach(f=>zip.file('media/'+f.fn, f.blob));
+  const out=await zip.generateAsync({type:'blob'});
+  download('LIBRA_pack.zip', out);
+  toast('packed ✓');
+};
+$('#bLoad').onclick=()=>$('#fLoad').click();
+$('#fLoad').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  let json;
+  if(f.name.endsWith('.zip') && window.JSZip){
+    const z=await JSZip.loadAsync(f);
+    json=JSON.parse(await z.file('LIBRA.json').async('string'));
+    // re-hydrate media by filename match; missing → fallback emoji
+    for(const entry of Object.values(json.apps||{})){
+      for(const k in entry){ const r=entry[k];
+        if(r.file && z.file('media/'+r.file)){
+          const blob=await z.file('media/'+r.file).async('blob');
+          r.url=URL.createObjectURL(blob); r.blob=blob;
+        } else if(r.kind!=='none'){ r.url=''; } }
+    }
+  } else json=JSON.parse(await f.text());
+
+  state.apps=[]; state.items=[];
+  (json.apps||[]).forEach(entry=>{
+    const k=Object.keys(entry)[0], r=entry[k];
+    state.apps.push({ id:k, name:r.name||k, emoji:r.label||'🐰',
+      preview:r.kind&&r.kind!=='none' ? {kind:r.kind, url:r.url||'', blob:r.blob} : null });
+  });
+  (json.stage||[]).forEach(entry=>{
+    const k=Object.keys(entry)[0]; state.items.push({id:k, ...entry[k]});
+  });
+  renderGrid(); renderItems(); persist(); toast('loaded ✓');
+  e.target.value='';
+};
+function download(name, data){
+  const a=document.createElement('a');
+  a.href = data instanceof Blob ? URL.createObjectURL(data) : URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download=name; a.click();
+}
+
+/* ---------- 7. CLOCK ---------- */
+setInterval(()=>{ const d=new Date();
+  $('#clock').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+},1000);
+
+/* ---------- 8. BRIDGE TO YOUR EXISTING APP ---------- */
+window.LIBRA = {
+  send: (msg) => { const f=document.getElementById('slot');
+    if(f && f.contentWindow) f.contentWindow.postMessage(msg,'*'); },
+  onMessage: (fn) => addEventListener('message', e=>fn(e.data))
+};
+</script>
+</body>
+</html>
