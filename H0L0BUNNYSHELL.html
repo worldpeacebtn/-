@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>WorldPeaceBtn · Holo Rabbit OS</title>
+<style>
+:root{
+  --o:#ff8a1f; --y:#ffd23f; --w:#fff6ea; --neon:#ffb057;
+  --r:44px; --pulse:.35; --glass:rgba(255,255,255,.16); --stroke:rgba(255,255,255,.55);
+  --ink:#4a2400; --bunny:#fff6ea; --bunnyEar:#fff; --bg1:#fffaf2; --bg2:#ffe9a8;
+  --bg3:#ffc93f; --bg4:#ff8a1f; --bg5:#ff6a00;
+}
+/* --- THEMES --- */
+body[data-theme="day"]{ --bg1:#eaf7ff; --bg2:#ffe8c2; --bg3:#ffd77a; --bg4:#ffb44f;
+  --bg5:#ff8a3d; --bunny:#fff; --bunnyEar:#fff; --ink:#3a2000; }
+body[data-theme="night"]{ --bg1:#120a2a; --bg2:#2a1252; --bg3:#4a1e6b; --bg4:#6a2a8f;
+  --bg5:#3a0f5f; --bunny:#e8dcff; --bunnyEar:#d0bcff; --ink:#f0e6ff;
+  --glass:rgba(255,255,255,.10); --stroke:rgba(220,190,255,.55); }
+body[data-theme="snow"]{ --bg1:#ffffff; --bg2:#eaf4ff; --bg3:#cfe4ff; --bg4:#a9c9ff;
+  --bg5:#7fa8ff; --bunny:#ffffff; --bunnyEar:#eaf4ff; --ink:#1a2a55; }
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;font-family:ui-rounded,"SF Pro Rounded",system-ui,
+  -apple-system,"Segoe UI",sans-serif;color:var(--ink);overscroll-behavior:none;touch-action:manipulation;
+  transition:color .5s}
+
+/* ---------- BACKGROUND ---------- */
+#bg{position:fixed;inset:0;z-index:0;transition:background 1s;
+  background:radial-gradient(130% 100% at 25% 0%,var(--bg1) 0%,var(--bg2) 22%,var(--bg3) 48%,
+    var(--bg4) 76%,var(--bg5) 100%)}
+.cloud{position:fixed;z-index:1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,255,255,.98),rgba(255,255,255,0) 72%);
+  filter:blur(10px);will-change:transform;opacity:.8}
+#grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.14;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='.85'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
+
+/* ---------- BUNNY (CSS cloud ears + body) ---------- */
+#bunny{position:fixed;z-index:0;left:50%;top:-6vh;transform:translateX(-50%);
+  width:min(72vw,560px);height:52vh;pointer-events:none;opacity:.5;filter:blur(2px);
+  transition:filter .8s,opacity .8s}
+#bunny .ear{position:absolute;width:22%;height:78%;top:0;border-radius:50%;
+  background:radial-gradient(closest-side,var(--bunnyEar),transparent 72%)}
+#bunny .ear.l{left:24%} #bunny .ear.r{right:24%}
+#bunny .head{position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:56%;height:52%;border-radius:50%;
+  background:radial-gradient(closest-side,var(--bunny),transparent 72%)}
+body[data-theme="snow"] #bunny{filter:blur(3px);opacity:.65}
+
+/* ---------- LED FRAME ---------- */
+#frame{position:fixed;inset:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right))
+  max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+  z-index:8;pointer-events:none;border-radius:calc(var(--r) + 18px);
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,.6),
+    inset 0 0 34px rgba(255,170,80,calc(var(--pulse)*1.1)),
+    inset 0 0 90px rgba(255,120,20,calc(var(--pulse)*.5)),
+    0 0 70px rgba(255,150,60,calc(var(--pulse)*.9));
+  transition:box-shadow .25s linear}
+#frame::after{content:"";position:absolute;inset:-2px;border-radius:inherit;
+  background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.5),transparent 40%);
+  animation:spin 9s linear infinite;opacity:.5;mix-blend-mode:screen}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- DEVICE ---------- */
+#device{position:fixed;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(94vw,430px);height:min(88vh,900px);border-radius:var(--r);overflow:hidden;
+  background:linear-gradient(160deg,rgba(255,255,255,.5),rgba(255,255,255,.14));
+  backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+  box-shadow:0 30px 80px rgba(120,50,0,.45),inset 0 1px 0 rgba(255,255,255,.7);
+  display:flex;flex-direction:column}
+@media (orientation:landscape){#device{width:min(86vw,960px);height:min(84vh,520px);--r:36px}}
+
+#topbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px 4px;
+  font-size:12px;font-weight:700;letter-spacing:.4px}
+#topbar .dot{width:8px;height:8px;border-radius:50%;background:#ff7a1a;box-shadow:0 0 10px #ff9a3c}
+#topbar .spacer{flex:1}
+#topbar select{font:inherit;font-size:11px;border:1px solid var(--stroke);background:rgba(255,255,255,.4);
+  border-radius:10px;padding:3px 6px;color:inherit}
+
+/* ---------- WORK AREA (repo cards + foils) ---------- */
+#work{flex:1;position:relative;overflow:hidden;padding:4px 8px 0}
+#grid{position:absolute;inset:4px 8px 0;overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;
+  padding:6px 4px 110px;display:grid;gap:10px;grid-template-columns:repeat(2,1fr);align-content:start}
+#grid::-webkit-scrollbar{display:none}
+@media (orientation:landscape){#grid{grid-template-columns:repeat(4,1fr)}}
+@media (min-width:700px) and (orientation:portrait){#grid{grid-template-columns:repeat(3,1fr)}}
+
+.tile{scroll-snap-align:start;position:relative;aspect-ratio:9/13;border-radius:20px;
+  overflow:hidden;border:1.5px solid var(--stroke);background:var(--glass);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;font-size:40px;
+  box-shadow:0 8px 24px rgba(140,60,0,.22),inset 0 1px 0 rgba(255,255,255,.6);
+  transition:transform .16s,box-shadow .16s;cursor:pointer;user-select:none;touch-action:none}
+.tile:active{transform:scale(.96)}
+.tile .prev{position:absolute;inset:0;object-fit:cover;width:100%;height:100%}
+.tile .label{position:absolute;left:0;right:0;bottom:0;padding:5px 7px;font-size:10px;
+  font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(90,40,0,.8));
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .badge{position:absolute;top:6px;left:6px;font-size:9px;font-weight:700;
+  padding:2px 6px;border-radius:8px;background:rgba(0,0,0,.4);color:#fff}
+.tile .pin{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+  background:rgba(0,0,0,.45);color:#fff;font-size:12px;line-height:22px;text-align:center;
+  display:none}
+.tile:hover .pin{display:block}
+.tile .pin.on{display:block;background:#ff7a1a}
+
+/* ---------- FOILS (pinned windows, keyframe-style layers) ---------- */
+#foils{position:absolute;inset:0;z-index:12;pointer-events:none;overflow:hidden}
+.foil{position:absolute;width:78%;height:76%;border-radius:18px;overflow:hidden;
+  background:rgba(255,255,255,.9);backdrop-filter:blur(20px);
+  box-shadow:0 12px 40px rgba(120,50,0,.4),inset 0 1px 0 rgba(255,255,255,.8);
+  border:1.5px solid var(--stroke);pointer-events:auto;touch-action:none;
+  transition:transform .2s,box-shadow .2s}
+.foil.locked{cursor:default}
+.foil.locked .foil-bar{cursor:default}
+.foil-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:11px;font-weight:700;
+  background:linear-gradient(180deg,rgba(255,210,63,.5),rgba(255,138,31,.3));cursor:grab;user-select:none}
+.foil-bar .name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foil-bar button{border:0;background:transparent;font:inherit;font-size:14px;cursor:pointer;color:inherit;
+  padding:2px 4px}
+.foil-body{width:100%;height:calc(100% - 30px);background:#fff}
+.foil-body iframe{width:100%;height:100%;border:0;background:#fff}
+#stickerLayerTag{position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  z-index:14;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;
+  background:rgba(0,0,0,.55);color:#fff;display:none;pointer-events:none}
+body.stickerlayer #stickerLayerTag{display:block}
+
+/* ---------- STAGE (stickers / notes) ---------- */
+#stage{position:absolute;inset:0;z-index:16;pointer-events:none;overflow:hidden}
+body.edit #stage{pointer-events:auto;background:rgba(255,255,255,.04)}
+.item{position:absolute;pointer-events:auto;touch-action:none;transform-origin:center;cursor:grab}
+.item img{width:100%;height:100%;object-fit:contain;pointer-events:none;display:block}
+.bubble{padding:7px 11px;border-radius:14px;background:rgba(255,255,255,.9);
+  border:2px solid rgba(255,255,255,.95);box-shadow:0 6px 16px rgba(140,60,0,.28);
+  font-size:12px;font-weight:600;max-width:60vw}
+body.edit .item{outline:1.5px dashed rgba(255,120,20,.8);outline-offset:3px}
+
+/* ---------- EDIT PANEL ---------- */
+#panel{position:absolute;z-index:22;left:8px;right:8px;bottom:8px;display:none;
+  padding:8px 12px;border-radius:18px;background:rgba(255,255,255,.92);
+  backdrop-filter:blur(18px);box-shadow:0 10px 30px rgba(120,50,0,.35);
+  font-size:11px;font-weight:600}
+body.edit #panel.on{display:block}
+#panel .row{display:flex;align-items:center;gap:8px;margin:4px 0}
+#panel input[type=range]{flex:1;accent-color:#ff8a1f}
+#panel button{border:0;border-radius:10px;padding:6px 10px;font:inherit;font-weight:700;
+  background:linear-gradient(180deg,#ffd23f,#ff8a1f);color:#4a2400;cursor:pointer}
+
+/* ---------- DOCK (music + video preview) ---------- */
+#dock{position:fixed;z-index:9;left:50%;bottom:max(12px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);width:min(94vw,430px);height:56px;border-radius:28px;
+  display:flex;align-items:center;gap:8px;padding:0 10px;
+  background:rgba(255,255,255,.36);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1.5px solid var(--stroke);box-shadow:0 12px 34px rgba(120,50,0,.3);
+  touch-action:pan-x;transition:height .25s,width .25s,border-radius .25s}
+@media (orientation:landscape){#dock{width:min(86vw,960px)}}
+#dock.expanded{height:min(60vh,320px);width:min(94vw,430px);border-radius:22px;
+  flex-direction:column;align-items:stretch;padding:10px}
+#dock .row1{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+#dock .cov{width:38px;height:38px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;
+  font-size:20px;background:linear-gradient(140deg,#fff3d0,#ffb057);box-shadow:inset 0 1px 0 #fff;
+  overflow:hidden}
+#dock .cov img,#dock .cov video{width:100%;height:100%;object-fit:cover}
+#dock .meta{flex:1;min-width:0;line-height:1.15}
+#dock .meta b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dock .meta span{font-size:10px;opacity:.7}
+#dock button{border:0;background:transparent;font-size:18px;padding:4px 6px;cursor:pointer;
+  color:var(--ink);border-radius:10px}
+#dock button:active{background:rgba(255,255,255,.3)}
+#dock .seek{position:absolute;left:12px;right:12px;bottom:5px;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.5);overflow:hidden}
+#dock.expanded .seek{bottom:6px;left:14px;right:14px}
+#dock .seek i{display:block;height:100%;width:0;background:#ff7a1a}
+#dock .expand-area{display:none;flex:1;border-radius:14px;overflow:hidden;background:#000;
+  margin-top:8px}
+#dock.expanded .expand-area{display:flex}
+#dock .expand-area video,#dock .expand-area iframe{width:100%;height:100%;border:0;object-fit:contain;background:#000}
+
+/* ---------- HUD (draggable) ---------- */
+#hud{position:fixed;z-index:10;top:max(70px,calc(env(safe-area-inset-top) + 60px));
+  left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:6px;
+  max-width:min(94vw,460px);justify-content:center;padding:6px;
+  background:rgba(255,255,255,.28);backdrop-filter:blur(14px);border-radius:20px;
+  border:1px solid rgba(255,255,255,.4);box-shadow:0 8px 24px rgba(120,50,0,.22);
+  cursor:grab;user-select:none;touch-action:none}
+#hud.dragging{cursor:grabbing}
+#hud button{border:1.5px solid var(--stroke);background:rgba(255,255,255,.42);
+  backdrop-filter:blur(12px);border-radius:14px;padding:7px 10px;font:inherit;
+  font-size:11px;font-weight:700;color:inherit;cursor:pointer;transition:transform .12s}
+#hud button:active{transform:scale(.94)}
+#hud button.on{background:linear-gradient(180deg,var(--y),var(--o));color:#fff}
+#hud.mini button{padding:5px 7px;font-size:10px}
+#hud.mini button span.lbl{display:none}
+
+/* ---------- EXPORT BUTTON (centered 1/3 corner) ---------- */
+#export{position:fixed;z-index:11;right:max(14px,env(safe-area-inset-right));
+  bottom:max(78px,calc(env(safe-area-inset-bottom) + 78px));
+  display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+#export button{border:1.5px solid var(--stroke);background:rgba(255,255,255,.5);
+  backdrop-filter:blur(16px);border-radius:14px;padding:7px 11px;font:inherit;font-size:11px;
+  font-weight:700;color:inherit;cursor:pointer;box-shadow:0 6px 18px rgba(120,50,0,.25)}
+#export button:active{transform:scale(.95)}
+
+/* ---------- MODAL / CHARACTER CARD ---------- */
+.modal{position:fixed;z-index:30;inset:0;display:none;place-items:center;
+  background:rgba(60,20,0,.5);backdrop-filter:blur(10px)}
+.modal.on{display:grid}
+.holo{width:min(86vw,330px);aspect-ratio:5/7;border-radius:26px;position:relative;
+  background:linear-gradient(150deg,rgba(150,90,255,.5),rgba(255,255,255,.18));
+  border:1.5px solid rgba(220,190,255,.85);backdrop-filter:blur(20px);
+  box-shadow:0 0 60px rgba(150,90,255,.55),inset 0 1px 0 rgba(255,255,255,.7);
+  padding:16px;display:flex;flex-direction:column;gap:10px;color:#fff}
+.holo .suit{position:absolute;top:10px;font-size:22px;opacity:.9}
+.holo .suit.l{left:14px}.holo .suit.r{right:14px;transform:rotate(180deg)}
+.holo .pic{flex:0 0 44%;border-radius:18px;overflow:hidden;background:rgba(255,255,255,.15);
+  display:grid;place-items:center;font-size:52px}
+.holo .pic img{width:100%;height:100%;object-fit:cover}
+.holo textarea{flex:1;width:100%;border:0;border-radius:14px;padding:10px;resize:none;
+  font:inherit;font-size:12px;background:rgba(255,255,255,.18);color:#fff}
+.holo textarea::placeholder{color:rgba(255,255,255,.6)}
+.holo .bar{display:flex;gap:8px}
+.holo button{flex:1;border:0;border-radius:14px;padding:9px;font:inherit;font-weight:700;
+  cursor:pointer;background:rgba(255,255,255,.88);color:#4a1e6b}
+
+#toast{position:fixed;z-index:40;left:50%;bottom:88px;transform:translateX(-50%);
+  padding:10px 16px;border-radius:14px;background:rgba(60,25,0,.88);color:#fff;
+  font-size:12px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.on{opacity:1}
+</style>
+</head>
+<body data-theme="twilight">
+
+<div id="bg"></div>
+<div id="grain"></div>
+<div id="bunny"><div class="ear l"></div><div class="ear r"></div><div class="head"></div></div>
+<div id="frame"></div>
+
+<div id="device">
+  <div id="topbar">
+    <span class="dot"></span><span>WorldPeaceBtn · HOLO</span>
+    <span class="spacer"></span>
+    <select id="themeSel" title="Theme">
+      <option value="twilight">🌆 twilight</option>
+      <option value="day">☀️ day</option>
+      <option value="night">🌙 night</option>
+      <option value="snow">❄️ snowbunny</option>
+    </select>
+    <span id="clock">--:--</span>
+  </div>
+
+  <div id="work">
+    <div id="grid"><div class="loading" style="grid-column:1/-1;text-align:center;padding:20px;font-size:12px;opacity:.7">⏳ loading repos…</div></div>
+    <div id="stage"></div>
+    <div id="foils"></div>
+    <div id="stickerLayerTag">STICKER LAYER · click foils to unlock</div>
+    <div id="panel">
+      <div class="row"><span id="psel">—</span><span style="flex:1"></span>
+        <button id="pdel">🗑 remove</button></div>
+      <div class="row">size<input id="psize" type="range" min="8" max="90" value="26"></div>
+      <div class="row">rot <input id="prot" type="range" min="-180" max="180" value="0"></div>
+      <div class="row">t0 <input id="pt0" type="range" min="0" max="60" value="0">
+                       t1 <input id="pt1" type="range" min="0" max="60" value="6"></div>
+    </div>
+  </div>
+</div>
+
+<div id="dock">
+  <div class="row1" style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+    <div class="cov" id="cov">🐰</div>
+    <div class="meta"><b id="title">no track</b><span id="sub">tap ＋ to load</span></div>
+    <button id="prev">⏮</button>
+    <button id="play">▶</button>
+    <button id="next">⏭</button>
+    <button id="addm">＋</button>
+    <button id="expand" title="expand">⤢</button>
+  </div>
+  <div class="expand-area" id="expandArea"></div>
+  <div class="seek"><i id="bar"></i></div>
+</div>
+
+<div id="hud">
+  <button id="bEdit" title="edit mode">✎<span class="lbl"> edit</span></button>
+  <button id="bSticker">🧡<span class="lbl"> sticker</span></button>
+  <button id="bBubble">💬<span class="lbl"> note</span></button>
+  <button id="bChar">♥<span class="lbl">♠ char</span></button>
+  <button id="bMini" title="shrink hud">▫</button>
+  <button id="bReset" title="reset hud pos">⟲</button>
+</div>
+
+<div id="export">
+  <button id="exTxt" title="download text-only transcript">📄 txt</button>
+  <button id="exJson" title="download full settings json">🧾 json</button>
+  <button id="exZip" title="download app + uploads as zip">📦 zip</button>
+</div>
+
+<div class="modal" id="card">
+  <div class="holo">
+    <div class="suit l">♥</div><div class="suit r">♠</div>
+    <div class="pic" id="cPic">🐰</div>
+    <textarea id="cTxt" placeholder="Name · role · voice · secret…"></textarea>
+    <div class="bar">
+      <button id="cImg">🖼 pic</button>
+      <button id="cSave">save</button>
+      <button id="cClose">close</button>
+    </div>
+  </div>
+</div>
+
+<audio id="au"></audio>
+<input id="fAudio" type="file" multiple accept="audio/*,video/*" hidden>
+<input id="fLoad"  type="file" accept=".json,.zip" hidden>
+<input id="fFoils" type="file" multiple accept="*/*" hidden>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+/* ============================================================
+   Holo Rabbit OS v0.2 — WorldPeaceBtn integrated
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const USERNAME = 'worldpeacebtn';
+const state = {
+  apps: JSON.parse(localStorage.getItem('holo.apps')||'[]'),
+  items: JSON.parse(localStorage.getItem('holo.items')||'[]'),
+  foils: JSON.parse(localStorage.getItem('holo.foils')||'[]'),
+  hud: JSON.parse(localStorage.getItem('holo.hud')||'null'),
+  playlist: [], ti: 0, sel: null, edit:false, mini:false, stickerLayer:false
+};
+const save = () => {
+  localStorage.setItem('holo.apps', JSON.stringify(state.apps.map(a=>({
+    id:a.id,name:a.name,emoji:a.emoji,kind:a.kind,url:a.url,base:a.base,desc:a.desc}))));
+  localStorage.setItem('holo.items', JSON.stringify(state.items));
+  localStorage.setItem('holo.foils', JSON.stringify(state.foils));
+  if(state.hud) localStorage.setItem('holo.hud', JSON.stringify(state.hud));
+};
+const toast = t => { const e=$('#toast'); e.textContent=t; e.classList.add('on');
+  clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),1600); };
+
+/* ---------- THEME ---------- */
+$('#themeSel').onchange = e => {
+  document.body.dataset.theme = e.target.value;
+  localStorage.setItem('holo.theme', e.target.value);
+};
+document.body.dataset.theme = localStorage.getItem('holo.theme') || 'twilight';
+$('#themeSel').value = document.body.dataset.theme;
+
+/* ---------- PARALLAX CLOUDS ---------- */
+const clouds=[];
+for(let i=0;i<10;i++){
+  const c=document.createElement('div'); c.className='cloud';
+  const s=180+Math.random()*400;
+  c.style.width=s+'px'; c.style.height=s*0.55+'px';
+  c.style.left=(Math.random()*120-10)+'vw';
+  c.style.top=(Math.random()*100)+'vh';
+  c.style.opacity=(.3+Math.random()*.55).toFixed(2);
+  document.body.appendChild(c);
+  clouds.push({el:c, sp:.06+Math.random()*.22});
+}
+let cy=0, sy=0;
+addEventListener('scroll',()=>sy=scrollY,{passive:true});
+$('#grid').addEventListener('scroll',e=>sy=e.target.scrollTop,{passive:true});
+(function loop(){
+  cy += (sy-cy)*0.08;
+  clouds.forEach(c=>{ c.el.style.transform=`translate3d(0,${-cy*c.sp - (performance.now()*0.004*c.sp*10)%200}px,0)`; });
+  requestAnimationFrame(loop);
+})();
+
+/* ---------- FETCH REPOS ---------- */
+async function fetchRepos(){
+  const grid=$('#grid');
+  grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;font-size:12px;opacity:.7">⏳ fetching…</div>`;
+  try{
+    const r = await fetch(`https://api.github.com/users/${USERNAME}/repos?per_page=100&sort=updated&direction=desc`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const repos = await r.json();
+    if(!Array.isArray(repos) || !repos.length) throw new Error('empty');
+    grid.innerHTML='';
+    repos.forEach(repo=>{
+      let base = repo.homepage;
+      let kind = 'pages';
+      if(!base || !base.startsWith('http')){ base = `https://${USERNAME}.github.io/${repo.name}`; }
+      else if(base.includes('vercel.app')) kind='vercel';
+      else if(base.includes('netlify.app')) kind='netlify';
+      base = base.replace(/\/+$/,'');
+      state.apps.push({
+        id: repo.name, name: repo.name, emoji:'📁', kind:'repo',
+        base, desc: repo.description||'', html_url: repo.html_url
+      });
+    });
+    renderGrid(); save();
+  }catch(e){
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;font-size:12px;color:#f0883e">❌ ${e.message}<br>tap ⟲ to retry</div>`;
+  }
+}
+fetchRepos();
+
+/* ---------- GRID ---------- */
+function renderGrid(){
+  const g=$('#grid'); g.innerHTML='';
+  state.apps.forEach((a,i)=>{
+    const t=document.createElement('div'); t.className='tile'; t.dataset.i=i;
+    if(a.url && (a.kind==='image'||a.kind==='video')){
+      if(a.kind==='image'){ const im=new Image(); im.className='prev'; im.src=a.url; t.appendChild(im); }
+      else { const v=document.createElement('video'); v.className='prev'; v.src=a.url;
+        v.muted=true; v.playsInline=true; v.autoplay=true; v.loop=true; t.appendChild(v); }
+    } else { t.textContent = a.emoji || '📁'; }
+    const l=document.createElement('div'); l.className='label'; l.textContent=a.name; t.appendChild(l);
+    const b=document.createElement('div'); b.className='badge'; b.textContent=(a.kind||'').toUpperCase(); t.appendChild(b);
+    const p=document.createElement('div'); p.className='pin'+(state.foils.find(f=>f.id===a.id)?' on':''); p.textContent='📌';
+    p.onclick = e => { e.stopPropagation(); togglePin(a); };
+    t.appendChild(p);
+    t.onclick = () => openApp(a);
+    makeDraggableTile(t, a);
+    g.appendChild(t);
+  });
+}
+
+/* draggable tiles — pin to foil when dragged out of grid */
+function makeDraggableTile(el, app){
+  let dx=0,dy=0,down=false,t0=0,startX=0,startY=0;
+  el.addEventListener('pointerdown',e=>{
+    down=true; startX=e.clientX; startY=e.clientY;
+    t0=Date.now();
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!down) return;
+    dx=e.clientX-startX; dy=e.clientY-startY;
+    el.style.transform=`translate(${dx}px,${dy}px) scale(${1-Math.min(Math.hypot(dx,dy)/1200,.15)})`;
+    el.style.zIndex=999;
+  });
+  el.addEventListener('pointerup',e=>{
+    if(!down) return; down=false;
+    el.style.transform=''; el.style.zIndex='';
+    const moved=Math.hypot(dx,dy);
+    if(moved>60){ togglePin(app); }  // drag = pin as foil
+    else if(Date.now()-t0<400 && moved<8){ openApp(app); }
+    dx=0;dy=0;
+  });
+}
+
+/* ---------- FOILS (pinned windows, keyframe layers) ---------- */
+function togglePin(app){
+  const idx = state.foils.findIndex(f=>f.id===app.id);
+  if(idx>=0){ state.foils.splice(idx,1); }
+  else {
+    if(state.foils.length>=2){ state.foils.shift(); toast('two foils max — oldest removed'); }
+    state.foils.push({ id: app.id, name: app.name, url: app.base||app.url||'',
+      x: 8 + state.foils.length*6, y: 8 + state.foils.length*6, w: 78, h: 76, z: 20+state.foils.length });
+  }
+  renderFoils(); renderGrid(); save();
+}
+function renderFoils(){
+  const f=$('#foils'); f.innerHTML='';
+  state.foils.forEach((foil,i)=>{
+    const d=document.createElement('div'); d.className='foil'+(state.stickerLayer?' locked':'');
+    d.style.left=foil.x+'%'; d.style.top=foil.y+'%';
+    d.style.width=foil.w+'%'; d.style.height=foil.h+'%';
+    d.style.zIndex=foil.z;
+    d.innerHTML = `
+      <div class="foil-bar">
+        <span class="name">📌 ${foil.name}</span>
+        <button class="up" title="raise">▲</button>
+        <button class="close" title="close">✕</button>
+      </div>
+      <div class="foil-body"></div>`;
+    const body=d.querySelector('.foil-body');
+    if(foil.url){
+      const ifr=document.createElement('iframe'); ifr.src=foil.url; ifr.loading='lazy';
+      body.appendChild(ifr);
+    } else body.textContent='no url';
+    d.querySelector('.close').onclick = e => { e.stopPropagation();
+      state.foils.splice(i,1); renderFoils(); renderGrid(); save(); };
+    d.querySelector('.up').onclick = e => { e.stopPropagation();
+      foil.z = Math.max(...state.foils.map(f=>f.z))+1; renderFoils(); save(); };
+    d.addEventListener('pointerdown',()=>{
+      if(state.stickerLayer) return;
+      foil.z = Math.max(...state.foils.map(f=>f.z))+1;
+      renderFoils(); save();
+    });
+    makeFoilDraggable(d, foil);
+    f.appendChild(d);
+  });
+}
+function makeFoilDraggable(el, foil){
+  const bar = el.querySelector('.foil-bar');
+  let down=false, sx=0, sy=0, ox=0, oy=0;
+  bar.addEventListener('pointerdown',e=>{
+    if(state.stickerLayer) return;
+    if(e.target.tagName==='BUTTON') return;
+    down=true; sx=e.clientX; sy=e.clientY; ox=foil.x; oy=foil.y;
+    bar.setPointerCapture(e.pointerId);
+  });
+  bar.addEventListener('pointermove',e=>{
+    if(!down) return;
+    const r=$('#work').getBoundingClientRect();
+    foil.x = Math.max(0, Math.min(100-foil.w, ox + (e.clientX-sx)/r.width*100));
+    foil.y = Math.max(0, Math.min(100-foil.h, oy + (e.clientY-sy)/r.height*100));
+    el.style.left=foil.x+'%'; el.style.top=foil.y+'%';
+  });
+  bar.addEventListener('pointerup',()=>{ down=false; save(); });
+}
+// toggle sticker layer (locks foil interaction — keyframe "foil lift")
+function setStickerLayer(v){
+  state.stickerLayer = v;
+  document.body.classList.toggle('stickerlayer', v);
+  renderFoils();
+}
+
+/* ---------- HUD DRAGGABLE ---------- */
+const hud = $('#hud');
+function loadHud(){
+  if(state.hud){ hud.style.left=state.hud.x+'px'; hud.style.top=state.hud.y+'px';
+    hud.style.transform='none'; }
+}
+function saveHud(x,y){ state.hud={x,y}; save(); }
+loadHud();
+let hdrag=false, hsx=0, hsy=0, hx0=0, hy0=0;
+hud.addEventListener('pointerdown',e=>{
+  if(e.target.tagName==='BUTTON') return;
+  hdrag=true; hud.classList.add('dragging');
+  const r=hud.getBoundingClientRect();
+  hsx=e.clientX; hsy=e.clientY; hx0=r.left; hy0=r.top;
+  hud.setPointerCapture(e.pointerId);
+});
+hud.addEventListener('pointermove',e=>{
+  if(!hdrag) return;
+  const nx=hx0+(e.clientX-hsx), ny=hy0+(e.clientY-hsy);
+  hud.style.left=Math.max(4,Math.min(innerWidth-100,nx))+'px';
+  hud.style.top =Math.max(4,Math.min(innerHeight-60,ny))+'px';
+  hud.style.transform='none';
+});
+hud.addEventListener('pointerup',()=>{
+  if(!hdrag) return; hdrag=false; hud.classList.remove('dragging');
+  const r=hud.getBoundingClientRect(); saveHud(r.left, r.top);
+});
+$('#bReset').onclick = () => {
+  hud.style.left='50%'; hud.style.top='max(70px, calc(env(safe-area-inset-top) + 60px))';
+  hud.style.transform='translateX(-50%)'; state.hud=null; save(); toast('hud reset');
+};
+$('#bMini').onclick = () => {
+  state.mini = !state.mini;
+  hud.classList.toggle('mini', state.mini);
+  $('#bMini').textContent = state.mini ? '◻' : '▫';
+};
+
+/* ---------- EDIT / STICKER / NOTE ---------- */
+$('#bEdit').onclick = () => {
+  state.edit=!state.edit; document.body.classList.toggle('edit', state.edit);
+  $('#bEdit').classList.toggle('on', state.edit);
+};
+$('#bSticker').onclick = () => { state.mode='sticker'; state.edit=true;
+  document.body.classList.add('edit'); $('#bEdit').classList.add('on');
+  toast('tap stage to drop 🐰'); };
+$('#bBubble').onclick  = () => { state.mode='bubble'; state.edit=true;
+  document.body.classList.add('edit'); $('#bEdit').classList.add('on');
+  toast('tap stage to add note'); };
+
+$('#stage').addEventListener('pointerdown', e=>{
+  if(!state.edit || e.target!==$('#stage')) return;
+  const r=$('#stage').getBoundingClientRect();
+  const x=((e.clientX-r.left)/r.width*100).toFixed(2);
+  const y=((e.clientY-r.top)/r.height*100).toFixed(2);
+  if(state.mode==='sticker') addItem({type:'emoji', v:'🐰', x, y, size:16, rot:0, t0:0, t1:6});
+  if(state.mode==='bubble')  addItem({type:'bubble', v:'new note…', x, y, size:14, rot:0, t0:0, t1:6});
+});
+function addItem(o){
+  o.id='i'+Date.now()+Math.random().toString(36).slice(2,5);
+  state.items.push(o); renderItems(); save();
+}
+function renderItems(){
+  const s=$('#stage'); s.innerHTML='';
+  state.items.forEach(o=>{
+    const d=document.createElement('div'); d.className='item'; d.dataset.id=o.id;
+    d.style.left=o.x+'%'; d.style.top=o.y+'%';
+    d.style.transform=`translate(-50%,-50%) rotate(${o.rot}deg)`;
+    if(o.type==='bubble'){
+      d.innerHTML=`<div class="bubble" style="font-size:${o.size*0.85}px">${esc(o.v)}</div>`;
+    } else if(o.src){
+      d.style.width=o.size+'%'; d.innerHTML=`<img src="${o.src}">`;
+    } else {
+      d.innerHTML=`<div style="font-size:${o.size*2.6}px;line-height:1">${o.v||'🐰'}</div>`;
+    }
+    makeItemDraggable(d, o);
+    d.onpointerdown = () => selectItem(o);
+    s.appendChild(d);
+  });
+}
+const esc = s => String(s).replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+function makeItemDraggable(el,o){
+  let on=false, sx=0, sy=0, ox=0, oy=0, r=null;
+  el.addEventListener('pointerdown',e=>{
+    if(!state.edit) return;
+    on=true; el.setPointerCapture(e.pointerId);
+    r=$('#stage').getBoundingClientRect();
+    sx=e.clientX; sy=e.clientY; ox=parseFloat(o.x); oy=parseFloat(o.y);
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!on) return;
+    o.x=(ox+(e.clientX-sx)/r.width*100).toFixed(2);
+    o.y=(oy+(e.clientY-sy)/r.height*100).toFixed(2);
+    el.style.left=o.x+'%'; el.style.top=o.y+'%';
+  });
+  el.addEventListener('pointerup',()=>{ on=false; save(); });
+}
+function selectItem(o){
+  state.sel=o; $('#panel').classList.add('on');
+  $('#psel').textContent = o.type+' '+o.id.slice(-3);
+  $('#psize').value=o.size; $('#prot').value=o.rot;
+  $('#pt0').value=o.t0; $('#pt1').value=o.t1;
+}
+['psize','prot','pt0','pt1'].forEach(id=>{
+  $('#'+id).oninput = e => {
+    const o=state.sel; if(!o) return;
+    const k={psize:'size',prot:'rot',pt0:'t0',pt1:'t1'}[id];
+    o[k]=parseFloat(e.target.value); renderItems(); selectItem(o); save();
+  };
+});
+$('#pdel').onclick = () => {
+  state.items=state.items.filter(x=>x!==state.sel);
+  state.sel=null; $('#panel').classList.remove('on'); renderItems(); save();
+};
+
+/* ---------- DOCK (music + video) ---------- */
+const au=$('#au'); let ac=null, an=null, srcNode=null;
+$('#addm').onclick = () => $('#fAudio').click();
+$('#fAudio').onchange = e => {
+  [...e.target.files].forEach(f=>{
+    const kind = f.type.startsWith('video')?'video': f.type.startsWith('audio')?'audio':'file';
+    state.playlist.push({name:f.name, url:URL.createObjectURL(f), kind, blob:f});
+  });
+  if(state.playlist.length && !au.src) load(0);
+  toast(state.playlist.length+' tracks');
+  e.target.value='';
+};
+function load(i){
+  if(!state.playlist.length) return;
+  state.ti=(i+state.playlist.length)%state.playlist.length;
+  const t=state.playlist[state.ti];
+  $('#title').textContent=t.name.replace(/\.[^.]+$/,'');
+  $('#sub').textContent=(state.ti+1)+' / '+state.playlist.length+' · '+t.kind;
+  // update cover
+  const cov=$('#cov'); cov.innerHTML='';
+  if(t.kind==='video'){
+    const v=document.createElement('video'); v.src=t.url; v.muted=true; v.playsInline=true;
+    v.autoplay=true; v.loop=true; cov.appendChild(v);
+  } else if(t.kind==='audio'){
+    cov.textContent = ['🐰','🧡','✨','🌙','🍊'][state.ti%5];
+  } else cov.textContent='📦';
+  // expanded area
+  const ex=$('#expandArea'); ex.innerHTML='';
+  if(t.kind==='video'){
+    const v=document.createElement('video'); v.src=t.url; v.controls=true; v.autoplay=true;
+    v.playsInline=true; v.loop=true; ex.appendChild(v);
+  } else if(t.kind==='audio'){
+    au.src=t.url;
+  } else {
+    ex.innerHTML = `<div style="color:#fff;display:grid;place-items:center;width:100%;height:100%;font-size:12px">${t.name}</div>`;
+  }
+}
+$('#play').onclick = () => {
+  if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)();
+    srcNode=ac.createMediaElementSource(au); an=ac.createAnalyser(); an.fftSize=64;
+    srcNode.connect(an); an.connect(ac.destination); pulse(); }catch(e){} }
+  const v=$('#expandArea').querySelector('video');
+  if(v){ v.paused?v.play():v.pause(); $('#play').textContent=v.paused?'▶':'⏸'; return; }
+  if(au.paused){ au.play(); $('#play').textContent='⏸'; } else { au.pause(); $('#play').textContent='▶'; }
+};
+$('#next').onclick = () => { load(state.ti+1); };
+$('#prev').onclick = () => { load(state.ti-1); };
+au.ontimeupdate = () => { if(au.duration) $('#bar').style.width=(au.currentTime/au.duration*100)+'%'; };
+au.onended = () => $('#next').click();
+$('#expand').onclick = () => {
+  const d=$('#dock'); d.classList.toggle('expanded');
+  $('#expand').textContent = d.classList.contains('expanded')?'⤡':'⤢';
+};
+/* sideways swipe skip */
+let dx0=null;
+$('#dock').addEventListener('pointerdown',e=>{ if(e.target.tagName==='BUTTON') return; dx0=e.clientX; });
+$('#dock').addEventListener('pointerup',e=>{
+  if(dx0===null) return; const d=e.clientX-dx0; dx0=null;
+  if(d<-50) $('#next').click(); else if(d>50) $('#prev').click();
+});
+function pulse(){
+  const d=new Uint8Array(an.frequencyBinCount);
+  (function f(){
+    an.getByteFrequencyData(d);
+    const avg=d.reduce((a,b)=>a+b,0)/d.length/255;
+    document.documentElement.style.setProperty('--pulse',(0.2+avg*0.9).toFixed(3));
+    requestAnimationFrame(f);
+  })();
+}
+
+/* ---------- CHARACTER CARD ---------- */
+$('#bChar').onclick = () => $('#card').classList.add('on');
+$('#cClose').onclick = () => $('#card').classList.remove('on');
+$('#cImg').onclick = () => {
+  const i=document.createElement('input'); i.type='file'; i.accept='image/*';
+  i.onchange=()=>{ const f=i.files[0]; if(!f) return;
+    $('#cPic').innerHTML=`<img src="${URL.createObjectURL(f)}">`; }; i.click();
+};
+$('#cSave').onclick = () => {
+  const t=$('#cTxt').value.trim()||'unnamed';
+  state.apps.push({ id:'c'+Date.now(), name:t.split('\n')[0].slice(0,20), emoji:'♥', kind:'char',
+    url: $('#cPic').querySelector('img')?.src||'' });
+  $('#card').classList.remove('on'); renderGrid(); save(); toast('character saved');
+};
+
+/* ---------- EXPORT ---------- */
+function coord(i){ return `X${i%9}Y${Math.floor(i/9)%9}Z${Math.floor(i/81)}`; }
+$('#exTxt').onclick = () => {
+  const lines = [];
+  lines.push('=== HOLO RABBIT OS · TRANSCRIPT ===');
+  lines.push('saved: '+new Date().toISOString());
+  lines.push('');
+  lines.push('--- apps ---');
+  state.apps.forEach((a,i)=>{
+    lines.push(`${coord(i)} rabbit=${a.kind||'?'} name="${a.name}" url=${a.url||a.base||'-'}`);
+  });
+  lines.push('');
+  lines.push('--- stage items ---');
+  state.items.forEach((o,i)=>{
+    lines.push(`${coord(i)} fish=${o.type} x=${o.x} y=${o.y} size=${o.size} rot=${o.rot} t0=${o.t0} t1=${o.t1} v="${(o.v||'').replace(/"/g,"'")}"`);
+  });
+  lines.push('');
+  lines.push('--- pinned foils ---');
+  state.foils.forEach((f,i)=>{
+    lines.push(`${coord(i)} bird=foil name="${f.name}" url=${f.url} x=${f.x} y=${f.y} w=${f.w} h=${f.h} z=${f.z}`);
+  });
+  download('holo_transcript.txt', new Blob([lines.join('\n')], {type:'text/plain'}));
+  toast('txt saved');
+};
+$('#exJson').onclick = () => {
+  const json = {
+    format:'HOLO-RABBIT', version:'0.2', saved:new Date().toISOString(),
+    theme: document.body.dataset.theme,
+    legend:{ rabbit:'app tile', fish:'stage sticker/note', bird:'pinned foil layer' },
+    apps: state.apps, items: state.items, foils: state.foils, hud: state.hud
+  };
+  download('holo_settings.json', new Blob([JSON.stringify(json,null,1)],{type:'application/json'}));
+  toast('json saved');
+};
+$('#exZip').onclick = async () => {
+  if(!window.JSZip) return toast('JSZip offline');
+  const zip = new JSZip();
+  const json = { format:'HOLO-RABBIT', version:'0.2', saved:new Date().toISOString(),
+    legend:{rabbit:'app',fish:'sticker',bird:'foil'},
+    apps: state.apps.map(a=>({...a, url: undefined, base: undefined})),
+    items: state.items, foils: state.foils };
+  // attach uploads
+  const uploads = state.playlist.filter(t=>t.blob);
+  uploads.forEach((t,i)=>{ zip.file(`media/${coord(i)}_${t.name}`, t.blob); });
+  // attach character images (from dataURLs — skip)
+  zip.file('HOLO.json', JSON.stringify(json,null,1));
+  const out = await zip.generateAsync({type:'blob'});
+  download('holo_pack.zip', out);
+  toast('zip saved');
+};
+$('#bSaveZip')?.addEventListener('click', ()=>$('#exZip').click());
+function download(name, data){
+  const a=document.createElement('a');
+  a.href = URL.createObjectURL(data); a.download=name; a.click();
+}
+
+/* ---------- CLOCK ---------- */
+setInterval(()=>{
+  const d=new Date();
+  $('#clock').textContent = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+},1000);
+
+/* ---------- OPEN APP ---------- */
+function openApp(app){
+  const idx = state.foils.findIndex(f=>f.id===app.id);
+  if(idx>=0){ toast('already pinned — see foil'); return; }
+  togglePin(app);
+  toast('📌 pinned as foil');
+}
+
+/* ---------- INIT ---------- */
+renderGrid(); renderItems(); renderFoils();
+if(!state.apps.length) fetchRepos();
+</script>
+</body>
+</html>
