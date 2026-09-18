@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>Steward Frame · Holo Gameboy</title>
+<style>
+:root{
+  --o:#ff8a1f; --y:#ffd23f; --gold:#ffcc55;
+  --ink:#ffe4c0; --ink2:#ffb070;
+  --bg0:#0a0400;
+  --glass:rgba(28,12,0,.75);
+  --border:rgba(255,150,60,.55);
+  /* FF12 RW palette */
+  --ivory:#f5ecd5; --ivory2:#e8d9b2;
+  --navy:#1a2744; --navy2:#0f1a2f;
+  --rwGold:#c9a54b; --rwBlue:#4a6fa5; --rwRed:#a13a2e;
+  --hex:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;
+  font:500 14px/1.4 ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;
+  color:var(--ink);background:
+    radial-gradient(80% 60% at 50% 0%, #180800 0%, #0a0400 70%);
+  overscroll-behavior:none;touch-action:manipulation;
+  user-select:none;-webkit-user-select:none}
+
+/* ================= STEWARD FRAME (Gameboy shell) ================= */
+#stewardFrame{
+  position:fixed;
+  left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(94vw,360px);
+  z-index:50;
+  touch-action:none;
+  transition:left .25s,top .25s;
+  /* Gameboy shell */
+  border-radius:26px 26px 44px 44px;
+  padding:14px 12px 20px;
+  background:
+    linear-gradient(160deg,
+      rgba(60,30,15,.95) 0%,
+      rgba(38,16,6,.98) 45%,
+      rgba(20,8,2,1) 100%);
+  border:2px solid rgba(255,180,80,.5);
+  box-shadow:
+    inset 0 2px 0 rgba(255,220,150,.35),
+    inset 0 -3px 0 rgba(0,0,0,.6),
+    0 20px 60px rgba(0,0,0,.8),
+    0 0 80px rgba(255,150,60,.18)}
+#stewardFrame::before{
+  content:"";position:absolute;inset:6px;border-radius:20px 20px 38px 38px;
+  pointer-events:none;
+  background:linear-gradient(160deg, rgba(255,200,120,.08), transparent 40%);
+  box-shadow:inset 0 0 0 1px rgba(255,180,80,.15)}
+
+/* header */
+#sfHead{
+  display:flex;align-items:center;gap:6px;
+  padding:2px 6px 8px;font-size:11px;font-weight:800;
+  color:var(--gold);letter-spacing:.5px;
+  cursor:grab;touch-action:none}
+#sfHead:active{cursor:grabbing}
+#sfHead .title{flex:1;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:var(--ink)}
+#sfHead .dot{
+  width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.5);
+  cursor:pointer;display:grid;place-items:center;
+  font-size:10px;font-weight:900;color:#fff;
+  touch-action:none;transition:transform .12s}
+#sfHead .dot:active{transform:scale(.85)}
+#sfHead .dot.cls{background:linear-gradient(180deg,#ff5a5a,#c00)}
+#sfHead .dot.min{background:linear-gradient(180deg,#ffd23f,#c98a2a)}
+#sfHead .dot.center{background:linear-gradient(180deg,#7ed957,#3a8a2a)}
+
+/* =========== SCREEN (mini-world) =========== */
+#sfScreen{
+  position:relative;
+  border-radius:12px;
+  padding:8px;
+  background:
+    radial-gradient(120% 100% at 50% 0%, #2a1a08 0%, #100804 80%);
+  box-shadow:
+    inset 0 3px 8px rgba(0,0,0,.9),
+    inset 0 -2px 0 rgba(255,200,120,.15),
+    0 0 0 2px rgba(255,180,80,.45),
+    0 0 20px rgba(255,140,220,.15);
+  overflow:hidden}
+#sfScreen::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg,
+      rgba(255,200,120,.035) 0 1px, transparent 1px 3px);
+  mix-blend-mode:screen;border-radius:12px}
+
+#miniWorld{
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  grid-template-rows:repeat(6,1fr);
+  gap:1px;
+  height:240px;
+  border-radius:8px;
+  overflow:hidden;
+  background:#080401}
+
+/* =========== TILES =========== */
+.tile{
+  position:relative;
+  background:
+    linear-gradient(155deg, #1a1208, #0a0604);
+  border-radius:2px;
+  display:grid;place-items:center;
+  font-size:18px;
+  cursor:pointer;touch-action:none;
+  transition:background .15s, box-shadow .2s;
+  box-shadow:inset 0 1px 0 rgba(255,200,120,.05)}
+.tile.walk{background:linear-gradient(155deg, #241a08, #100a04)}
+.tile.asset{
+  background:
+    radial-gradient(circle at 50% 40%,
+      rgba(255,200,120,.35),
+      rgba(255,120,40,.12) 60%,
+      transparent 100%);
+  box-shadow:inset 0 0 12px rgba(255,180,80,.5),
+    inset 0 0 0 1px rgba(255,200,120,.4)}
+.tile.asset:active{transform:scale(.94)}
+.tile.portal{
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(180,120,255,.55),
+      rgba(100,60,200,.2) 60%,
+      transparent 100%);
+  box-shadow:inset 0 0 18px rgba(180,120,255,.6),
+    inset 0 0 0 1px rgba(200,160,255,.55)}
+.tile.start{
+  background:
+    radial-gradient(circle, rgba(120,220,140,.4), transparent 70%);
+  box-shadow:inset 0 0 14px rgba(120,220,140,.5)}
+.tile .ticon{font-size:20px;line-height:1;filter:drop-shadow(0 0 6px currentColor)}
+.tile .tname{
+  position:absolute;bottom:1px;left:2px;right:2px;
+  font-size:6px;font-weight:800;color:var(--gold);
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-shadow:0 0 4px #000;pointer-events:none}
+
+/* =========== STEWARD SPRITE =========== */
+#steward{
+  position:absolute;
+  width:36px;height:36px;
+  font-size:28px;line-height:36px;
+  text-align:center;
+  transform:translate(-50%,-50%);
+  z-index:5;
+  pointer-events:auto;cursor:pointer;touch-action:none;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.7))
+    drop-shadow(0 0 10px rgba(255,220,150,.5));
+  animation:idle 2.4s ease-in-out infinite;
+  transition:left .28s cubic-bezier(.34,1.56,.64,1),
+    top .28s cubic-bezier(.34,1.56,.64,1)}
+@keyframes idle{
+  0%,100%{transform:translate(-50%,-50%)}
+  50%{transform:translate(-50%,-54%)}
+}
+#steward.hop{
+  animation:hop .32s ease}
+@keyframes hop{
+  0%{transform:translate(-50%,-50%) scaleY(1)}
+  40%{transform:translate(-50%,-100%) scaleY(.8)}
+  100%{transform:translate(-50%,-50%) scaleY(1)}
+}
+#steward.talking::before{
+  content:"💬";position:absolute;top:-16px;left:50%;
+  transform:translateX(-50%);font-size:14px;
+  animation:idle 1s ease-in-out infinite}
+#steward.quest::after{
+  content:"!";position:absolute;top:-16px;right:-4px;
+  font-size:16px;font-weight:900;color:var(--gold);
+  text-shadow:0 0 8px var(--gold);
+  animation:questPulse 1s ease-in-out infinite}
+@keyframes questPulse{
+  50%{transform:translateY(-4px);text-shadow:0 0 14px var(--gold)}}
+
+/* =========== SPEECH BUBBLE =========== */
+#bubble{
+  position:absolute;
+  left:50%;
+  top:-6px;
+  transform:translate(-50%,-100%);
+  background:linear-gradient(160deg, var(--ivory), var(--ivory2));
+  color:var(--navy);
+  padding:8px 12px;
+  border-radius:14px;
+  border:2px solid var(--navy);
+  box-shadow:0 6px 16px rgba(0,0,0,.5),
+    inset 0 1px 0 rgba(255,255,255,.6);
+  font-size:11px;font-weight:700;
+  max-width:220px;text-align:center;
+  line-height:1.3;
+  opacity:0;pointer-events:none;
+  transition:opacity .25s, transform .25s;
+  z-index:20}
+#bubble.on{opacity:1;transform:translate(-50%,calc(-100% - 6px))}
+#bubble::after{
+  content:"";position:absolute;
+  bottom:-8px;left:50%;transform:translateX(-50%);
+  width:0;height:0;
+  border-left:8px solid transparent;
+  border-right:8px solid transparent;
+  border-top:8px solid var(--navy)}
+
+/* =========== GAMEBOY CONTROLS =========== */
+#sfControls{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 8px 6px;
+  gap:10px}
+#dpad{
+  position:relative;width:88px;height:88px}
+#dpad button{
+  position:absolute;border:0;cursor:pointer;
+  background:linear-gradient(155deg, #3a1e08, #150700);
+  color:var(--ink);font-size:14px;font-weight:900;
+  border-radius:6px;
+  box-shadow:inset 0 1px 0 rgba(255,200,120,.2),
+    0 3px 0 rgba(0,0,0,.7),
+    0 0 8px rgba(255,150,60,.15);
+  touch-action:none;
+  transition:transform .08s}
+#dpad button:active{
+  transform:translateY(2px);
+  box-shadow:inset 0 1px 0 rgba(255,200,120,.2),
+    0 1px 0 rgba(0,0,0,.7)}
+#dpad .up{left:50%;top:0;width:30px;height:30px;margin-left:-15px}
+#dpad .left{left:0;top:50%;width:30px;height:30px;margin-top:-15px}
+#dpad .right{right:0;top:50%;width:30px;height:30px;margin-top:-15px}
+#dpad .down{left:50%;bottom:0;width:30px;height:30px;margin-left:-15px}
+#dpad::after{
+  content:"";position:absolute;left:50%;top:50%;
+  width:14px;height:14px;margin:-7px 0 0 -7px;
+  border-radius:50%;background:#0a0604;
+  box-shadow:inset 0 0 6px rgba(0,0,0,.9)}
+
+#abBtns{
+  display:flex;gap:8px;align-items:center}
+#abBtns button{
+  width:44px;height:44px;border-radius:50%;
+  border:0;cursor:pointer;touch-action:none;
+  font:inherit;font-size:14px;font-weight:900;
+  color:#1a0000;
+  background:radial-gradient(circle at 35% 30%, #ffe9a8, #c98a2a 70%, #6a4410);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.6),
+    inset 0 -3px 0 rgba(0,0,0,.3),
+    0 4px 0 rgba(0,0,0,.6),
+    0 0 14px rgba(255,180,80,.35);
+  transition:transform .08s}
+#abBtns button:active{
+  transform:translateY(3px);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.6),
+    inset 0 -3px 0 rgba(0,0,0,.3),
+    0 1px 0 rgba(0,0,0,.6)}
+#abBtns button.b{background:radial-gradient(circle at 35% 30%, #ffc0a8, #a13a2e 70%, #4a1a10); color:#fff}
+
+/* speaker grille */
+#sfGrille{
+  display:flex;justify-content:flex-end;
+  padding:6px 12px 0;gap:4px}
+#sfGrille i{
+  display:block;width:4px;height:16px;border-radius:2px;
+  background:linear-gradient(180deg, #2a1408, #100604);
+  box-shadow:inset 0 1px 0 rgba(255,200,120,.1)}
+
+/* ================= QUEST BAR (FF12 RW) ================= */
+#questBar{
+  position:fixed;
+  left:50%;transform:translateX(-50%);
+  bottom:max(8px,env(safe-area-inset-bottom));
+  width:min(96vw,380px);
+  z-index:40;
+  border-radius:14px;
+  background:linear-gradient(160deg, var(--ivory), var(--ivory2));
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.7),
+    inset 0 1px 0 rgba(255,255,255,.9),
+    inset 0 0 0 1px rgba(0,0,0,.2),
+    0 0 0 3px var(--navy),
+    0 0 0 4px var(--rwGold);
+  padding:10px 12px 12px;
+  color:var(--navy);
+  font-family:ui-serif,Georgia,serif}
+#questBar .qbHead{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:6px;margin-bottom:6px;
+  border-bottom:2px solid var(--rwGold)}
+#questBar .qbTitle{
+  font-size:12px;font-weight:900;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--navy)}
+#questBar .qbCount{
+  font-size:10px;font-weight:800;
+  padding:2px 8px;border-radius:10px;
+  background:var(--navy);color:var(--rwGold)}
+#questBar .qbList{
+  display:flex;flex-direction:column;gap:6px;
+  max-height:22vh;overflow-y:auto;scrollbar-width:none}
+#questBar .qbList::-webkit-scrollbar{display:none}
+
+.quest{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 8px;border-radius:8px;
+  background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.35));
+  border:1.5px solid var(--rwBlue);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+  transition:transform .2s, background .3s;
+  cursor:pointer;touch-action:none}
+.quest:active{transform:scale(.98)}
+.quest.done{
+  background:linear-gradient(180deg, rgba(201,165,75,.35), rgba(201,165,75,.15));
+  border-color:var(--rwGold);
+  opacity:.75}
+.quest.locked{
+  opacity:.4;filter:grayscale(.6);pointer-events:none}
+.quest .qIcon{
+  width:26px;height:26px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:6px;
+  background:linear-gradient(160deg, var(--rwBlue), var(--navy));
+  color:var(--rwGold);font-size:14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.quest.done .qIcon{background:linear-gradient(160deg, var(--rwGold), #7a5a1a)}
+.quest .qBody{flex:1;min-width:0}
+.quest .qTitle{
+  font-size:11px;font-weight:900;color:var(--navy);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.2}
+.quest .qDesc{
+  font-size:9px;font-weight:600;color:#4a5568;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.2;margin-top:1px}
+.quest.done .qTitle{text-decoration:line-through;text-decoration-color:var(--rwGold)}
+.quest .qReward{
+  font-size:9px;font-weight:900;color:var(--rwRed);
+  padding:2px 6px;border-radius:6px;
+  background:rgba(161,58,46,.12);
+  border:1px solid rgba(161,58,46,.3);
+  white-space:nowrap;
+  flex-shrink:0}
+.quest.done .qReward{
+  color:var(--rwGold);
+  background:rgba(201,165,75,.25);
+  border-color:var(--rwGold)}
+
+/* ================= TOAST ================= */
+#toast{
+  position:fixed;z-index:200;
+  left:50%;top:max(60px,calc(env(safe-area-inset-top) + 40px));
+  transform:translateX(-50%);
+  padding:10px 16px;border-radius:14px;
+  background:rgba(20,8,0,.95);color:var(--gold);
+  font-size:12px;font-weight:800;
+  opacity:0;transition:opacity .25s;
+  pointer-events:none;border:1px solid var(--border);
+  max-width:80vw;text-align:center}
+#toast.on{opacity:1}
+
+/* hud chips on the frame for actions user can take */
+#sfActions{
+  display:flex;justify-content:center;gap:8px;
+  padding:8px 6px 4px}
+.sfChip{
+  padding:6px 12px;border-radius:12px;
+  border:1px solid rgba(255,180,80,.5);
+  background:rgba(255,200,120,.15);
+  color:var(--ink);font-size:10px;font-weight:800;
+  cursor:pointer;touch-action:none;
+  transition:transform .12s;
+  box-shadow:inset 0 1px 0 rgba(255,220,150,.4)}
+.sfChip:active{transform:scale(.92)}
+.sfChip.on{background:linear-gradient(180deg,var(--y),var(--o));color:#1a0000}
+
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+
+<div id="stewardFrame">
+  <div id="sfHead">
+    <span>🐘</span>
+    <span class="title" id="sfTitle">Chapter I · The Archive</span>
+    <button class="dot center" title="recenter">◎</button>
+    <button class="dot min" title="minimize">−</button>
+    <button class="dot cls" title="close">✕</button>
+  </div>
+
+  <div id="sfScreen">
+    <div id="miniWorld"></div>
+    <div id="steward">🐘</div>
+    <div id="bubble"></div>
+  </div>
+
+  <div id="sfActions">
+    <button class="sfChip" data-act="upload">⬆ Upload</button>
+    <button class="sfChip" data-act="note">📝 Note</button>
+    <button class="sfChip" data-act="photo">📷 Photo</button>
+    <button class="sfChip" data-act="talk">💬 Talk</button>
+  </div>
+
+  <div id="sfControls">
+    <div id="dpad">
+      <button class="up" data-dir="up">▲</button>
+      <button class="left" data-dir="left">◀</button>
+      <button class="right" data-dir="right">▶</button>
+      <button class="down" data-dir="down">▼</button>
+    </div>
+    <div id="abBtns">
+      <button class="b" id="btnB">B</button>
+      <button id="btnA">A</button>
+    </div>
+  </div>
+
+  <div id="sfGrille"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+
+<!-- QUEST BAR — FF12 RW style -->
+<div id="questBar">
+  <div class="qbHead">
+    <span class="qbTitle">⚔ Quests</span>
+    <span class="qbCount" id="qbCount">0 / 0</span>
+  </div>
+  <div class="qbList" id="qbList"></div>
+</div>
+
+<input id="fUp" type="file" multiple accept="*/*">
+<input id="fCam" type="file" accept="image/*" capture="environment">
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   STEWARD FRAME — self-contained module
+   Drop into any app. Exposes window.Steward API.
+   ===================================================================== */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const toast = t => {
+  const e = $('#toast'); e.textContent = t; e.classList.add('on');
+  clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 1800);
+};
+
+/* ===================== STATE ===================== */
+const state = {
+  grid: [],           // {kind:'walk'|'asset'|'portal'|'start', assetId?, name?, icon?}
+  cols: 8, rows: 6,
+  sx: 4, sy: 3,       // steward position
+  bubbleTimer: null,
+  // quest tracking
+  metSteward: false,
+  uploaded: false,
+  noted: false,
+  photoTaken: false,
+  exploredAssets: [],
+  // system hooks
+  onOpenAsset: null,
+  // persistence
+  completedQuests: JSON.parse(localStorage.getItem('steward.completed') || '[]')
+};
+
+/* ===================== QUEST DEFINITIONS ===================== */
+/* Rewards are shown as chips. Quests unlock in sequence (hunters-guild style). */
+const QUESTS = [
+  { id:'q1', icon:'🐘', title:'Meet the Steward', desc:'Tap the elephant',
+    reward:'♥ bond', check: () => state.metSteward, unlockedFrom: null },
+  { id:'q2', icon:'📦', title:'Bring a memory', desc:'Upload any file via ⬆',
+    reward:'✦ bag', check: () => state.uploaded, unlockedFrom: 'q1' },
+  { id:'q3', icon:'🗺', title:'Scout the archive', desc:'Walk onto an asset tile',
+    reward:'🔮 zone 2', check: () => state.exploredAssets.length > 0, unlockedFrom: 'q2' },
+  { id:'q4', icon:'📷', title:'Send a photo', desc:'Capture with camera',
+    reward:'✨ sticker', check: () => state.photoTaken, unlockedFrom: 'q3' },
+  { id:'q5', icon:'📜', title:'Make a note', desc:'Add a note card',
+    reward:'📖 chapter II', check: () => state.noted, unlockedFrom: 'q4' }
+];
+
+/* ===================== SEED GRID ===================== */
+function seedGrid(){
+  state.grid = [];
+  const { cols, rows } = state;
+  for(let y = 0; y < rows; y++){
+    for(let x = 0; x < cols; x++){
+      state.grid.push({ kind: 'walk' });
+    }
+  }
+  // Start tile (steward spawns here)
+  const startIdx = state.sy * cols + state.sx;
+  state.grid[startIdx] = { kind: 'start' };
+
+  // Seed asset tiles — plug your repos in via setAssets()
+  const SEED_ASSETS = [
+    { id:'lab',   name:'LAB',     icon:'🔬', url:'#' },
+    { id:'orb',   name:'ORB',     icon:'🔮', url:'#' },
+    { id:'libra', name:'LIBRA',   icon:'♒', url:'#' },
+    { id:'lib',   name:'LIB',     icon:'📚', url:'#' },
+    { id:'art',   name:'ART',     icon:'🎨', url:'#' }
+  ];
+  const ASSET_POSITIONS = [1, 3, 6, 9, 13, 18, 21, 26, 30, 34, 41, 46];
+  SEED_ASSETS.forEach((a, i) => {
+    const pos = ASSET_POSITIONS[i % ASSET_POSITIONS.length];
+    if(pos >= 0 && pos < state.grid.length && pos !== startIdx){
+      state.grid[pos] = { kind:'asset', assetId: a.id, name: a.name, icon: a.icon, url: a.url };
+    }
+  });
+
+  // Portal tiles — open the honeycomb / next zone
+  state.grid[0] = { kind:'portal', icon:'🌀', name:'PORTAL' };
+  state.grid[cols * rows - 1] = { kind:'portal', icon:'🌀', name:'PORTAL' };
+}
+
+/* ===================== RENDER WORLD ===================== */
+function renderWorld(){
+  const w = $('#miniWorld');
+  w.innerHTML = '';
+  state.grid.forEach((tile, i) => {
+    const x = i % state.cols;
+    const y = Math.floor(i / state.cols);
+    const el = document.createElement('div');
+    el.className = 'tile ' + tile.kind;
+    el.dataset.x = x; el.dataset.y = y; el.dataset.idx = i;
+    if(tile.kind === 'asset'){
+      el.innerHTML = `<div class="ticon">${tile.icon}</div><div class="tname">${tile.name}</div>`;
+    } else if(tile.kind === 'portal'){
+      el.innerHTML = `<div class="ticon">${tile.icon}</div>`;
+    }
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      // tap tile: if adjacent to steward or click-any, walk toward and trigger
+      walkTo(x, y);
+    });
+    w.appendChild(el);
+  });
+  positionSteward();
+}
+function positionSteward(){
+  const w = $('#miniWorld').getBoundingClientRect();
+  const tileW = w.width / state.cols;
+  const tileH = w.height / state.rows;
+  const px = state.sx * tileW + tileW / 2;
+  const py = state.sy * tileH + tileH / 2;
+  const s = $('#steward');
+  s.style.left = px + 'px';
+  s.style.top = py + 'px';
+}
+
+/* ===================== MOVEMENT ===================== */
+function move(dir){
+  const oldX = state.sx, oldY = state.sy;
+  if(dir === 'up')    state.sy = Math.max(0, state.sy - 1);
+  if(dir === 'down')  state.sy = Math.min(state.rows - 1, state.sy + 1);
+  if(dir === 'left')  state.sx = Math.max(0, state.sx - 1);
+  if(dir === 'right') state.sx = Math.min(state.cols - 1, state.sx + 1);
+  if(oldX === state.sx && oldY === state.sy) return;
+  positionSteward();
+  const s = $('#steward');
+  s.classList.remove('hop'); void s.offsetWidth; s.classList.add('hop');
+  onStewardLand();
+}
+function walkTo(x, y){
+  // Simple: move one step toward the target. If already adjacent, trigger.
+  const dx = x - state.sx, dy = y - state.sy;
+  if(Math.abs(dx) + Math.abs(dy) === 0){ onStewardLand(); return; }
+  if(Math.abs(dx) >= Math.abs(dy)){
+    move(dx > 0 ? 'right' : 'left');
+  } else {
+    move(dy > 0 ? 'down' : 'up');
+  }
+}
+
+/* ===================== LANDING EVENT ===================== */
+function onStewardLand(){
+  const idx = state.sy * state.cols + state.sx;
+  const tile = state.grid[idx];
+  if(!tile) return;
+
+  if(tile.kind === 'asset'){
+    if(!state.exploredAssets.includes(tile.assetId)){
+      state.exploredAssets.push(tile.assetId);
+      stewardSays(`📦 Found: ${tile.name}. Opening it for you.`, 3000);
+    } else {
+      stewardSays(`The ${tile.name} again? Still fascinating.`, 2200);
+    }
+    // hand off to host app: open asset preview
+    if(typeof state.onOpenAsset === 'function'){
+      state.onOpenAsset(tile);
+    } else {
+      toast('📦 open: ' + tile.name);
+    }
+    checkQuests();
+  }
+
+  if(tile.kind === 'portal'){
+    stewardSays(`🌀 A gateway. Maybe the next chapter is there.`, 3000);
+    toast('🌀 portal reached');
+    checkQuests();
+  }
+
+  if(tile.kind === 'start'){
+    stewardSays(`You're home. Everything begins here.`, 2600);
+  }
+}
+
+/* ===================== STEWARD VOICE ===================== */
+function stewardSays(text, ms = 2600){
+  const b = $('#bubble');
+  const s = $('#steward');
+  b.textContent = text;
+  b.classList.add('on');
+  s.classList.add('talking');
+  clearTimeout(state.bubbleTimer);
+  state.bubbleTimer = setTimeout(() => {
+    b.classList.remove('on');
+    s.classList.remove('talking');
+  }, ms);
+}
+
+/* ===================== QUEST SYSTEM ===================== */
+function questsAvailable(){
+  return QUESTS.filter(q => {
+    if(state.completedQuests.includes(q.id)) return false;
+    if(q.unlockedFrom === null) return true;
+    return state.completedQuests.includes(q.unlockedFrom);
+  });
+}
+function checkQuests(){
+  let any = false;
+  QUESTS.forEach(q => {
+    if(state.completedQuests.includes(q.id)) return;
+    // must be unlocked
+    if(q.unlockedFrom && !state.completedQuests.includes(q.unlockedFrom)) return;
+    if(q.check()){
+      state.completedQuests.push(q.id);
+      localStorage.setItem('steward.completed', JSON.stringify(state.completedQuests));
+      any = true;
+      // celebrate
+      setTimeout(() => {
+        stewardSays(`✔ ${q.title} — reward: ${q.reward}`, 3400);
+        toast('✔ ' + q.title + ' · ' + q.reward);
+        renderQuests();
+      }, 500);
+    }
+  });
+  renderQuests();
+  return any;
+}
+function renderQuests(){
+  const list = $('#qbList');
+  const available = questsAvailable();
+  const done = state.completedQuests.length;
+  const total = QUESTS.length;
+  $('#qbCount').textContent = done + ' / ' + total;
+  list.innerHTML = '';
+  // show completed + currently available (limit 5)
+  const all = QUESTS.filter(q => state.completedQuests.includes(q.id) ||
+    (!q.unlockedFrom || state.completedQuests.includes(q.unlockedFrom)));
+  all.slice(-5).forEach(q => {
+    const isDone = state.completedQuests.includes(q.id);
+    const el = document.createElement('div');
+    el.className = 'quest' + (isDone ? ' done' : '');
+    el.innerHTML = `
+      <div class="qIcon">${isDone ? '✔' : q.icon}</div>
+      <div class="qBody">
+        <div class="qTitle">${q.title}</div>
+        <div class="qDesc">${q.desc}</div>
+      </div>
+      <div class="qReward">${q.reward}</div>
+    `;
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if(isDone){ stewardSays(`Done already. Nice work.`, 2000); }
+      else { stewardSays(`${q.title}: ${q.desc}`, 3200); }
+    });
+    list.appendChild(el);
+  });
+  if(!all.length){
+    list.innerHTML = '<div style="text-align:center;font-size:10px;color:#4a5568;padding:6px">No quests yet — tap the steward</div>';
+  }
+}
+
+/* ===================== CONTROLS ===================== */
+$$('#dpad button').forEach(b => {
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    move(b.dataset.dir);
+  });
+});
+$('#btnA').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  onStewardLand(); // A = interact on current tile
+});
+$('#btnB').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  stewardSays('…zzz', 1200);
+});
+
+/* ===================== TAP STEWARD ===================== */
+$('#steward').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  state.metSteward = true;
+  stewardSays(pickGreeting(), 3400);
+  checkQuests();
+});
+function pickGreeting(){
+  const opts = [
+    'Welcome, steward. I am here to guide you.',
+    'Every tile is a memory. Walk them all.',
+    'Upload a file — I will keep it safe.',
+    'Take a photo, and the frame will remember.',
+    'The archive grows when you do.'
+  ];
+  return opts[Math.floor(Math.random() * opts.length)];
+}
+
+/* ===================== ACTION CHIPS ===================== */
+$$('.sfChip').forEach(c => {
+  c.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const act = c.dataset.act;
+    if(act === 'upload'){ $('#fUp').click(); }
+    if(act === 'note'){
+      state.noted = true;
+      stewardSays('📝 Note written. The quest keeper is pleased.', 3000);
+      checkQuests();
+    }
+    if(act === 'photo'){
+      // try camera first, fall back to file
+      if(navigator.mediaDevices?.getUserMedia){
+        captureWithCamera();
+      } else {
+        $('#fCam').click();
+      }
+    }
+    if(act === 'talk'){
+      stewardSays(pickGreeting(), 3400);
+      state.metSteward = true;
+      checkQuests();
+    }
+  });
+});
+
+/* ===================== CAMERA CAPTURE (from steward) ===================== */
+async function captureWithCamera(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    // create a minimal capture viewport
+    const v = document.createElement('video');
+    v.srcObject = stream;
+    v.playsInline = true; v.muted = true; v.autoplay = true;
+    await v.play();
+
+    // shutter after user sees frame
+    stewardSays('📷 Hold still…', 2000);
+    setTimeout(() => {
+      const cv = document.createElement('canvas');
+      cv.width = v.videoWidth || 640;
+      cv.height = v.videoHeight || 480;
+      cv.getContext('2d').drawImage(v, 0, 0);
+      cv.toBlob(b => {
+        stream.getTracks().forEach(t => t.stop());
+        const url = URL.createObjectURL(b);
+        window.__lastPhoto = { url, name: 'scan-' + Date.now() + '.png', kind: 'image' };
+        state.photoTaken = true;
+        stewardSays('📸 A new memory joins the archive.', 3200);
+        toast('📸 captured');
+        // let host app react
+        if(typeof state.onPhoto === 'function') state.onPhoto(window.__lastPhoto);
+        checkQuests();
+      }, 'image/png');
+    }, 1600);
+  } catch(e){
+    toast('camera blocked · using file picker');
+    $('#fCam').click();
+  }
+}
+$('#fCam').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  const url = URL.createObjectURL(f);
+  state.photoTaken = true;
+  stewardSays('📸 A new memory joins the archive.', 3200);
+  if(typeof state.onPhoto === 'function') state.onPhoto({ url, name: f.name, kind: 'image' });
+  checkQuests();
+  e.target.value = '';
+});
+
+/* ===================== UPLOAD (from steward) ===================== */
+$('#fUp').addEventListener('change', e => {
+  const files = [...e.target.files];
+  if(!files.length) return;
+  state.uploaded = true;
+  const names = files.map(f => f.name).slice(0, 2).join(', ');
+  stewardSays(`📦 Received: ${names}${files.length > 2 ? '…' : ''}`, 3200);
+  toast('📦 ' + files.length + ' file' + (files.length > 1 ? 's' : ''));
+  if(typeof state.onUpload === 'function'){
+    files.forEach(f => state.onUpload({ name: f.name, file: f, url: URL.createObjectURL(f) }));
+  }
+  checkQuests();
+  e.target.value = '';
+});
+
+/* ===================== FRAME DRAG & CONTROLS ===================== */
+(function enableDrag(){
+  const frame = $('#stewardFrame');
+  const head = $('#sfHead');
+  let dg = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  head.addEventListener('pointerdown', e => {
+    if(e.target.classList.contains('dot')) return;
+    e.preventDefault();
+    dg = true;
+    const r = frame.getBoundingClientRect();
+    sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+    head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener('pointermove', e => {
+    if(!dg) return;
+    const nx = ox + (e.clientX - sx);
+    const ny = oy + (e.clientY - sy);
+    frame.style.left = nx + 'px';
+    frame.style.top  = ny + 'px';
+    frame.style.transform = 'translate(0,0)';
+  });
+  head.addEventListener('pointerup', () => { dg = false; });
+})();
+
+/* frame control dots */
+$('#sfHead .dot.cls').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  $('#stewardFrame').style.display = 'none';
+});
+$('#sfHead .dot.min').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  const f = $('#stewardFrame');
+  f.dataset.min = f.dataset.min === '1' ? '0' : '1';
+  if(f.dataset.min === '1'){
+    f.style.transform = 'translate(-50%,-50%) scale(.55)';
+  } else {
+    f.style.transform = f.style.left ? 'translate(0,0)' : 'translate(-50%,-50%)';
+  }
+});
+$('#sfHead .dot.center').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  const f = $('#stewardFrame');
+  f.style.left = '50%';
+  f.style.top = '50%';
+  f.style.transform = 'translate(-50%,-50%)';
+});
+
+/* ===================== PUBLIC API ===================== */
+window.Steward = {
+  setAssets(assets){
+    // assets: [{id, name, icon, url}]
+    // Wipe asset tiles and reseed from list
+    state.grid = state.grid.map(t => t.kind === 'asset' ? { kind:'walk' } : t);
+    const positions = [];
+    for(let i = 0; i < state.grid.length; i++){
+      if(state.grid[i].kind === 'walk') positions.push(i);
+    }
+    // shuffle
+    positions.sort(() => Math.random() - 0.5);
+    assets.slice(0, 12).forEach((a, i) => {
+      const pos = positions[i];
+      if(pos === undefined) return;
+      state.grid[pos] = { kind:'asset', assetId: a.id, name: a.name, icon: a.icon || '📦', url: a.url };
+    });
+    renderWorld();
+  },
+  onOpenAsset(fn){ state.onOpenAsset = fn; },
+  onUpload(fn){ state.onUpload = fn; },
+  onPhoto(fn){ state.onPhoto = fn; },
+  say(text, ms){ stewardSays(text, ms); },
+  markNote(){ state.noted = true; checkQuests(); },
+  chapterTitle(t){ $('#sfTitle').textContent = t; },
+  reset(){
+    state.completedQuests = [];
+    localStorage.removeItem('steward.completed');
+    state.metSteward = state.uploaded = state.noted = state.photoTaken = false;
+    state.exploredAssets = [];
+    renderQuests();
+  }
+};
+
+/* ===================== BOOT ===================== */
+window.addEventListener('load', () => {
+  seedGrid();
+  renderWorld();
+  renderQuests();
+  window.addEventListener('resize', positionSteward);
+
+  // Intro after a beat
+  setTimeout(() => {
+    stewardSays('I am your steward. Tap me to begin.', 4000);
+  }, 700);
+});
+
+/* prevent pull-to-refresh */
+document.addEventListener('touchmove', e => {
+  if(e.target.closest('textarea') || e.target.closest('input')) return;
+  e.preventDefault();
+}, { passive:false });
+</script>
+</body>
+</html>
