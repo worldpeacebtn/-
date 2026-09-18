@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>Holo Rabbit OS · v0.3</title>
+<style>
+:root{
+  --o:#ff8a1f; --y:#ffd23f;
+  --r:44px; --pulse:.35;
+  --glass:rgba(255,255,255,.16); --stroke:rgba(255,255,255,.55);
+  --ink:#4a2400;
+  --bg1:#fffaf2; --bg2:#ffe9a8; --bg3:#ffc93f; --bg4:#ff8a1f; --bg5:#ff6a00;
+  --bunny:#fff6ea; --bunnyEar:#fff;
+  --rainbow:conic-gradient(from 0deg,#ff4d4d,#ffb84d,#ffee4d,#4dff88,#4dd2ff,#a64dff,#ff4dd2,#ff4d4d);
+}
+body[data-theme="day"]{
+  --bg1:#eaf7ff; --bg2:#ffe8c2; --bg3:#ffd77a; --bg4:#ffb44f; --bg5:#ff8a3d;
+  --bunny:#fff; --bunnyEar:#fff; --ink:#3a2000;
+}
+body[data-theme="sun"]{
+  --bg1:#1a0500; --bg2:#3a0a05; --bg3:#5a1008; --bg4:#8a1a08; --bg5:#1a0300;
+  --bunny:#ff5533; --bunnyEar:#ff2200; --ink:#ffd0b0;
+  --glass:rgba(255,80,40,.08); --stroke:rgba(255,120,80,.5);
+  --o:#ff2200; --y:#ff8833;
+}
+body[data-theme="night"]{
+  --bg1:#f8fcff; --bg2:#dcefff; --bg3:#a9d8ff; --bg4:#7ab8ee; --bg5:#4a7dc0;
+  --bunny:#ffffff; --bunnyEar:#eaf4ff; --ink:#1a2a55;
+  --glass:rgba(200,230,255,.2); --stroke:rgba(255,255,255,.7);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;
+  font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--ink);overscroll-behavior:none;touch-action:manipulation;transition:color .5s}
+
+/* --- BG + FX --- */
+#bg{position:fixed;inset:0;z-index:0;transition:background 1s;
+  background:radial-gradient(130% 100% at 25% 0%,var(--bg1) 0%,var(--bg2) 22%,var(--bg3) 48%,
+    var(--bg4) 76%,var(--bg5) 100%)}
+#grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.14;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='.85'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
+#firelayer,#snowlayer{position:fixed;inset:0;z-index:1;pointer-events:none;display:none;overflow:hidden}
+body[data-theme="sun"] #firelayer{display:block}
+body[data-theme="night"] #snowlayer{display:block}
+.ash{position:absolute;background:#ff5020;border-radius:50%;
+  box-shadow:0 0 8px #ff2200,0 0 16px #ff5020;animation:rise linear infinite;opacity:.8}
+@keyframes rise{from{transform:translateY(0) scale(.6);opacity:0}
+  20%{opacity:.9} to{transform:translateY(-110vh) scale(.3);opacity:0}}
+.snow{position:absolute;color:#fff;text-shadow:0 0 6px #9cf;font-size:14px;animation:snowfall linear infinite}
+@keyframes snowfall{from{transform:translateY(-10vh) rotate(0)}to{transform:translateY(110vh) rotate(360deg)}}
+body[data-theme="sun"] #grain{opacity:.35}
+body[data-theme="sun"] #frame{filter:hue-rotate(-30deg) saturate(2)}
+
+/* --- Bunny silhouette --- */
+#bunny{position:fixed;z-index:0;left:50%;top:-6vh;transform:translateX(-50%);
+  width:min(72vw,560px);height:52vh;pointer-events:none;opacity:.5;filter:blur(2px);
+  transition:filter .8s,opacity .8s}
+#bunny .ear{position:absolute;width:22%;height:78%;top:0;border-radius:50%;
+  background:radial-gradient(closest-side,var(--bunnyEar),transparent 72%)}
+#bunny .ear.l{left:24%} #bunny .ear.r{right:24%}
+#bunny .head{position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:56%;height:52%;border-radius:50%;
+  background:radial-gradient(closest-side,var(--bunny),transparent 72%)}
+body[data-theme="night"] #bunny{filter:blur(3px);opacity:.7}
+body[data-theme="sun"] #bunny{filter:blur(1.5px) drop-shadow(0 0 30px #ff2200);opacity:.7}
+
+/* --- LED frame --- */
+#frame{position:fixed;inset:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right))
+  max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+  z-index:8;pointer-events:none;border-radius:calc(var(--r) + 18px);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.6),
+    inset 0 0 34px rgba(255,170,80,calc(var(--pulse)*1.1)),
+    inset 0 0 90px rgba(255,120,20,calc(var(--pulse)*.5)),
+    0 0 70px rgba(255,150,60,calc(var(--pulse)*.9));
+  transition:box-shadow .2s linear}
+#frame::after{content:"";position:absolute;inset:-2px;border-radius:inherit;
+  background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.5),transparent 40%);
+  animation:spin 9s linear infinite;opacity:.5;mix-blend-mode:screen}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* --- Device shell --- */
+#device{position:fixed;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(94vw,430px);height:min(88vh,900px);border-radius:var(--r);overflow:hidden;
+  background:linear-gradient(160deg,rgba(255,255,255,.5),rgba(255,255,255,.14));
+  backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+  box-shadow:0 30px 80px rgba(120,50,0,.45),inset 0 1px 0 rgba(255,255,255,.7);
+  display:flex;flex-direction:column}
+@media (orientation:landscape){#device{width:min(86vw,960px);height:min(84vh,520px);--r:36px}}
+
+/* --- Topbar (minimal) --- */
+#top{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:6px 12px;
+  font-size:12px;font-weight:700;letter-spacing:.4px}
+#top .logo{font-size:18px;filter:drop-shadow(0 0 6px #ff8a1f)}
+#top .spacer{flex:1}
+#top button{border:0;background:transparent;font:inherit;font-size:16px;cursor:pointer;
+  padding:4px 6px;color:inherit;border-radius:8px}
+#top button:active{background:rgba(255,255,255,.25)}
+#top #clock{font-size:11px;opacity:.7}
+
+/* --- Screen (main area) --- */
+#screen{flex:1;position:relative;overflow:hidden}
+
+/* --- Deck carousel (repos as fanned stacks) --- */
+#decks{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
+  display:flex;gap:24px;padding:20px 40px 20px 40px;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;align-items:center}
+#decks::-webkit-scrollbar{display:none}
+#decks .deck-slot{flex:0 0 auto;scroll-snap-align:center;width:min(70vw,280px);
+  aspect-ratio:4/5;perspective:1200px;cursor:pointer}
+.deck{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+.deck-slot:active .deck{transform:scale(.96)}
+.deck .dcard{position:absolute;inset:0;border-radius:22px;border:1.5px solid var(--stroke);
+  background:linear-gradient(140deg,rgba(255,255,255,.55),rgba(255,255,255,.15));
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 12px 32px rgba(120,50,0,.3),inset 0 1px 0 rgba(255,255,255,.7);
+  display:grid;place-items:center;padding:18px;text-align:center;font-weight:700;font-size:14px;
+  transition:transform .6s cubic-bezier(.34,1.56,.64,1),opacity .4s}
+.deck .dcard .emo{font-size:52px;margin-bottom:8px;filter:drop-shadow(0 0 12px rgba(255,150,60,.6))}
+.deck .dcard .name{word-break:break-word;overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical}
+.deck .dcard:nth-child(1){transform:translate(-14px,10px) rotate(-8deg) scale(.94);opacity:.7}
+.deck .dcard:nth-child(2){transform:translate(-7px,4px) rotate(-4deg) scale(.97);opacity:.85}
+.deck .dcard:nth-child(3){transform:translate(0,0) rotate(0)}
+.deck .dcard:nth-child(4){transform:translate(7px,4px) rotate(4deg) scale(.97);opacity:.85}
+.deck .dcard:nth-child(5){transform:translate(14px,10px) rotate(8deg) scale(.94);opacity:.7}
+.deck-slot:hover .dcard:nth-child(1){transform:translate(-26px,12px) rotate(-14deg) scale(.94)}
+.deck-slot:hover .dcard:nth-child(5){transform:translate(26px,12px) rotate(14deg) scale(.94)}
+
+/* --- Card stage (opened deck) --- */
+#stageWrap{position:absolute;inset:0;z-index:14;display:none;flex-direction:column;
+  background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(255,255,255,.1));
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#stageWrap.on{display:flex}
+#stageHead{flex:0 0 auto;padding:8px 14px;display:flex;align-items:center;gap:8px;
+  font-weight:700;font-size:13px;border-bottom:1px solid rgba(255,255,255,.35)}
+#stageHead button{border:0;background:rgba(255,255,255,.45);border-radius:10px;padding:5px 10px;
+  font:inherit;font-size:11px;font-weight:700;cursor:pointer;color:inherit}
+#cardRail{flex:1;overflow-x:auto;overflow-y:hidden;display:flex;gap:12px;padding:16px 20px;
+  scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;align-items:center}
+#cardRail::-webkit-scrollbar{display:none}
+.hcard{flex:0 0 auto;scroll-snap-align:center;width:min(70vw,240px);aspect-ratio:3/4;
+  border-radius:20px;border:1.5px solid var(--stroke);
+  background:linear-gradient(150deg,rgba(255,255,255,.7),rgba(255,255,255,.25));
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 10px 30px rgba(120,50,0,.28),inset 0 1px 0 rgba(255,255,255,.8);
+  display:flex;flex-direction:column;padding:14px;cursor:grab;user-select:none;touch-action:none;
+  transition:transform .25s,box-shadow .25s}
+.hcard.dragging{transform:scale(1.05) rotate(2deg);
+  box-shadow:0 20px 50px rgba(255,140,60,.55);z-index:99}
+.hcard .emo{font-size:42px;margin-bottom:8px;text-align:center;
+  filter:drop-shadow(0 0 10px rgba(255,140,60,.55))}
+.hcard .name{font-weight:700;font-size:13px;word-break:break-word;text-align:center;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.hcard .kind{margin-top:auto;font-size:10px;opacity:.6;text-align:center}
+
+/* --- Music-box open animation --- */
+#mbox{position:fixed;inset:0;z-index:60;display:none;place-items:center;pointer-events:none;
+  background:radial-gradient(circle at center,rgba(255,180,80,.4),transparent 65%)}
+#mbox.on{display:grid;animation:mboxFade 1.4s ease forwards}
+@keyframes mboxFade{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
+.mbox-ring{width:min(60vw,260px);aspect-ratio:1;border-radius:50%;
+  border:3px dashed rgba(255,255,255,.8);
+  box-shadow:0 0 40px rgba(255,180,80,.9),inset 0 0 40px rgba(255,180,80,.7);
+  animation:mboxSpin 1.4s cubic-bezier(.34,1.56,.64,1);position:relative}
+.mbox-ring::before{content:"🐰";position:absolute;inset:0;display:grid;place-items:center;
+  font-size:64px;filter:drop-shadow(0 0 20px #ff8a1f)}
+@keyframes mboxSpin{0%{transform:rotate(-180deg) scale(.3);opacity:0}
+  40%{transform:rotate(60deg) scale(1.1);opacity:1}
+  100%{transform:rotate(360deg) scale(1);opacity:1}}
+
+/* --- Sticker stage + foils --- */
+#stage{position:absolute;inset:0;z-index:16;pointer-events:none;overflow:hidden}
+body.edit #stage{pointer-events:auto;background:rgba(255,255,255,.04)}
+.item{position:absolute;pointer-events:auto;touch-action:none;transform-origin:center;cursor:grab}
+.item img{width:100%;height:100%;object-fit:contain;pointer-events:none;display:block}
+.bubble{padding:7px 11px;border-radius:14px;background:rgba(255,255,255,.9);
+  border:2px solid rgba(255,255,255,.95);box-shadow:0 6px 16px rgba(140,60,0,.28);
+  font-size:12px;font-weight:600;max-width:60vw}
+body.edit .item{outline:1.5px dashed rgba(255,120,20,.8);outline-offset:3px}
+#foils{position:absolute;inset:0;z-index:12;pointer-events:none;overflow:hidden}
+.foil{position:absolute;width:78%;height:76%;border-radius:18px;overflow:hidden;
+  background:rgba(255,255,255,.9);backdrop-filter:blur(20px);
+  box-shadow:0 12px 40px rgba(120,50,0,.4),inset 0 1px 0 rgba(255,255,255,.8);
+  border:1.5px solid var(--stroke);pointer-events:auto;touch-action:none}
+.foil-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:11px;font-weight:700;
+  background:linear-gradient(180deg,rgba(255,210,63,.5),rgba(255,138,31,.3));cursor:grab}
+.foil-bar .name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foil-bar button{border:0;background:transparent;font:inherit;font-size:14px;cursor:pointer;color:inherit}
+.foil-body{width:100%;height:calc(100% - 30px);background:#fff}
+.foil-body iframe{width:100%;height:100%;border:0;background:#fff}
+
+/* --- Audio-reactive orb on stage --- */
+#orb{position:absolute;right:14px;bottom:14px;z-index:11;width:44px;height:44px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#fff,#ff8a1f 60%,#ff2200);
+  box-shadow:0 0 16px rgba(255,140,60,.7),0 0 30px rgba(255,140,60,.4);
+  transform:scale(1);transition:transform .08s linear;pointer-events:none}
+
+/* --- Edit panel --- */
+#panel{position:absolute;z-index:22;left:8px;right:8px;bottom:8px;display:none;
+  padding:8px 12px;border-radius:18px;background:rgba(255,255,255,.92);
+  backdrop-filter:blur(18px);box-shadow:0 10px 30px rgba(120,50,0,.35);
+  font-size:11px;font-weight:600}
+body.edit #panel.on{display:block}
+#panel .row{display:flex;align-items:center;gap:8px;margin:4px 0}
+#panel input[type=range]{flex:1;accent-color:#ff8a1f}
+#panel button{border:0;border-radius:10px;padding:6px 10px;font:inherit;font-weight:700;
+  background:linear-gradient(180deg,var(--y),var(--o));color:#4a2400;cursor:pointer}
+
+/* --- Bottom HUD corners --- */
+.hudGroup{position:fixed;z-index:10;display:flex;gap:6px;padding:6px;
+  background:rgba(255,255,255,.28);backdrop-filter:blur(14px);border-radius:20px;
+  border:1px solid rgba(255,255,255,.4);box-shadow:0 8px 24px rgba(120,50,0,.22);
+  user-select:none;touch-action:none;transition:transform .2s}
+#hudL{left:max(10px,env(safe-area-inset-left));
+  bottom:max(78px,calc(env(safe-area-inset-bottom) + 78px))}
+#hudR{right:max(10px,env(safe-area-inset-right));
+  bottom:max(78px,calc(env(safe-area-inset-bottom) + 78px));flex-direction:column}
+.hudGroup button{border:1.5px solid var(--stroke);background:rgba(255,255,255,.45);
+  backdrop-filter:blur(12px);border-radius:14px;padding:7px 9px;font:inherit;
+  font-size:11px;font-weight:700;color:inherit;cursor:pointer;min-width:36px;min-height:36px;
+  display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.hudGroup button:active{transform:scale(.94)}
+.hudGroup button.on{background:linear-gradient(180deg,var(--y),var(--o));color:#fff}
+.hudGroup.mini button span.lbl{display:none}
+.hudGroup.mini button{padding:5px 7px;font-size:10px}
+
+/* --- Export overlay --- */
+#exOv{position:fixed;inset:0;z-index:70;display:none;place-items:center;
+  background:rgba(40,15,0,.55);backdrop-filter:blur(14px)}
+#exOv.on{display:grid}
+.exPanel{width:min(86vw,340px);padding:20px;border-radius:22px;
+  background:linear-gradient(150deg,rgba(255,255,255,.85),rgba(255,255,255,.5));
+  box-shadow:0 20px 60px rgba(120,50,0,.5),inset 0 1px 0 rgba(255,255,255,.9);
+  border:1.5px solid rgba(255,255,255,.8);display:flex;flex-direction:column;gap:10px}
+.exPanel h3{margin:0 0 4px 0;font-size:15px}
+.exPanel button{border:0;border-radius:14px;padding:12px;font:inherit;font-weight:700;
+  cursor:pointer;background:linear-gradient(180deg,var(--y),var(--o));color:#3a1e00;
+  box-shadow:0 6px 16px rgba(255,140,60,.4)}
+.exPanel button.ghost{background:rgba(255,255,255,.5);color:var(--ink);
+  box-shadow:inset 0 0 0 1.5px var(--stroke)}
+.exPanel small{opacity:.7;font-size:11px;text-align:center}
+
+/* --- DJ pult (bottom dock, expandable) --- */
+#dock{position:fixed;z-index:9;left:50%;bottom:max(12px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);width:min(94vw,430px);height:56px;border-radius:28px;
+  display:flex;align-items:center;gap:8px;padding:0 10px;
+  background:rgba(255,255,255,.4);backdrop-filter:blur(24px);
+  border:1.5px solid var(--stroke);box-shadow:0 12px 34px rgba(120,50,0,.3);
+  touch-action:pan-x;transition:height .3s,width .3s,border-radius .3s}
+@media (orientation:landscape){#dock{width:min(86vw,960px)}}
+#dock .row1{display:flex;align-items:center;gap:8px;flex:0 0 auto;width:100%}
+#dock .cov{width:38px;height:38px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;
+  font-size:20px;background:linear-gradient(140deg,#fff3d0,#ffb057);box-shadow:inset 0 1px 0 #fff;
+  overflow:hidden}
+#dock .cov img,#dock .cov video{width:100%;height:100%;object-fit:cover}
+#dock .meta{flex:1;min-width:0;line-height:1.15}
+#dock .meta b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dock .meta span{font-size:10px;opacity:.7}
+#dock button{border:0;background:transparent;font-size:18px;padding:4px 6px;cursor:pointer;
+  color:var(--ink);border-radius:10px}
+#dock button:active{background:rgba(255,255,255,.3)}
+#dock .seek{position:absolute;left:12px;right:12px;bottom:5px;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.5);overflow:hidden}
+#dock .seek i{display:block;height:100%;width:0;background:#ff7a1a;transition:width .15s linear}
+
+/* Expanded DJ pult */
+#dock.expanded{height:min(72vh,520px);width:min(94vw,430px);flex-direction:column;
+  align-items:stretch;padding:12px;border-radius:26px;position:fixed}
+#dock.expanded .row1{position:relative;z-index:2}
+#dock.expanded .dj{display:flex}
+.dj{display:none;flex:1;flex-direction:column;gap:8px;margin-top:10px;position:relative;z-index:2}
+.dj::before{content:"";position:absolute;inset:-8px;border-radius:20px;
+  background:var(--rainbow);filter:blur(14px);opacity:.55;z-index:-1;
+  animation:rainbowSpin 8s linear infinite,pulseGrow 1.4s ease-in-out infinite alternate}
+@keyframes rainbowSpin{to{filter:hue-rotate(360deg) blur(14px)}}
+@keyframes pulseGrow{from{transform:scale(1)}to{transform:scale(1.03)}}
+.dj .rainbow-frame{position:absolute;inset:0;border-radius:20px;padding:2px;
+  background:var(--rainbow);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
+  animation:rainbowSpin 6s linear infinite}
+.dj .row{display:flex;gap:6px;align-items:center;position:relative;z-index:2}
+.dj .chip{flex:0 0 auto;font-size:10px;font-weight:700;padding:5px 9px;border-radius:10px;
+  background:rgba(255,255,255,.55);cursor:pointer;border:1px solid rgba(255,255,255,.7)}
+.dj .chip.on{background:linear-gradient(180deg,var(--y),var(--o));color:#fff}
+.dj .labels{flex:0 0 auto;font-size:10px;font-weight:700;opacity:.75;width:52px}
+.dj .slider{flex:1;accent-color:#ff8a1f}
+.dj .voiceList{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;
+  background:rgba(255,255,255,.35);border-radius:14px;padding:8px;font-size:11px;font-weight:600}
+.dj .voiceList::-webkit-scrollbar{display:none}
+.dj .voiceList .vrow{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:8px;
+  background:rgba(255,255,255,.5)}
+.dj .voiceList .vrow button{border:0;background:transparent;cursor:pointer;font-size:13px;padding:2px 4px}
+.dj .bigbtn{flex:1;padding:14px;border-radius:16px;border:0;cursor:pointer;
+  font:inherit;font-weight:800;font-size:13px;color:#3a1e00;
+  background:linear-gradient(180deg,var(--y),var(--o));
+  box-shadow:0 6px 18px rgba(255,140,60,.4)}
+.dj .bigbtn.rec{background:linear-gradient(180deg,#ff5a5a,#c00);color:#fff;
+  animation:recPulse 1s ease-in-out infinite}
+@keyframes recPulse{50%{box-shadow:0 0 0 8px rgba(255,60,60,.25)}}
+
+/* --- Character card modal --- */
+.modal{position:fixed;z-index:30;inset:0;display:none;place-items:center;
+  background:rgba(60,20,0,.5);backdrop-filter:blur(10px)}
+.modal.on{display:grid}
+.holo{width:min(86vw,330px);aspect-ratio:5/7;border-radius:26px;position:relative;
+  background:linear-gradient(150deg,rgba(150,90,255,.5),rgba(255,255,255,.18));
+  border:1.5px solid rgba(220,190,255,.85);backdrop-filter:blur(20px);
+  box-shadow:0 0 60px rgba(150,90,255,.55),inset 0 1px 0 rgba(255,255,255,.7);
+  padding:16px;display:flex;flex-direction:column;gap:10px;color:#fff}
+.holo .suit{position:absolute;top:10px;font-size:22px;opacity:.9}
+.holo .suit.l{left:14px}.holo .suit.r{right:14px;transform:rotate(180deg)}
+.holo .pic{flex:0 0 44%;border-radius:18px;overflow:hidden;background:rgba(255,255,255,.15);
+  display:grid;place-items:center;font-size:52px}
+.holo .pic img{width:100%;height:100%;object-fit:cover}
+.holo textarea{flex:1;width:100%;border:0;border-radius:14px;padding:10px;resize:none;
+  font:inherit;font-size:12px;background:rgba(255,255,255,.18);color:#fff}
+.holo textarea::placeholder{color:rgba(255,255,255,.6)}
+.holo .bar{display:flex;gap:8px}
+.holo button{flex:1;border:0;border-radius:14px;padding:9px;font:inherit;font-weight:700;
+  cursor:pointer;background:rgba(255,255,255,.88);color:#4a1e6b}
+
+#toast{position:fixed;z-index:80;left:50%;bottom:88px;transform:translateX(-50%);
+  padding:10px 16px;border-radius:14px;background:rgba(60,25,0,.88);color:#fff;
+  font-size:12px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.on{opacity:1}
+
+/* Hidden file inputs */
+input[type=file]{display:none}
+</style>
+</head>
+<body data-theme="twilight">
+
+<div id="bg"></div>
+<div id="firelayer"></div>
+<div id="snowlayer"></div>
+<div id="grain"></div>
+<div id="bunny"><div class="ear l"></div><div class="ear r"></div><div class="head"></div></div>
+<div id="frame"></div>
+
+<div id="device">
+  <div id="top">
+    <span class="logo">🐰</span>
+    <button id="themeBtn" title="theme">🌆</button>
+    <span class="spacer"></span>
+    <span id="clock">--:--</span>
+  </div>
+
+  <div id="screen">
+    <div id="decks"></div>
+
+    <div id="stageWrap">
+      <div id="stageHead">
+        <button id="backDecks">◀ decks</button>
+        <span id="stageTitle">—</span>
+        <span style="flex:1"></span>
+        <button id="saveSet" title="save as card set">💾 set</button>
+      </div>
+      <div id="cardRail"></div>
+    </div>
+
+    <div id="stage"></div>
+    <div id="foils"></div>
+    <div id="orb"></div>
+
+    <div id="panel">
+      <div class="row"><span id="psel">—</span><span style="flex:1"></span>
+        <button id="pdel">🗑 remove</button></div>
+      <div class="row">size<input id="psize" type="range" min="8" max="90" value="26"></div>
+      <div class="row">rot <input id="prot" type="range" min="-180" max="180" value="0"></div>
+    </div>
+  </div>
+</div>
+
+<div class="hudGroup" id="hudL">
+  <button id="bEdit" title="edit mode">✎<span class="lbl"> edit</span></button>
+  <button id="bSticker">🧡<span class="lbl"> sticker</span></button>
+  <button id="bBubble">💬<span class="lbl"> note</span></button>
+  <button id="bChar">♥<span class="lbl">♠ char</span></button>
+</div>
+
+<div class="hudGroup" id="hudR">
+  <button id="bMini" title="mini">▫</button>
+  <button id="bReset" title="reset">⟲</button>
+  <button id="bTheme">🌗</button>
+</div>
+
+<div id="dock">
+  <div class="row1">
+    <div class="cov" id="cov">🐰</div>
+    <div class="meta"><b id="title">no track</b><span id="sub">tap ＋ to load</span></div>
+    <button id="prev">⏮</button>
+    <button id="play">▶</button>
+    <button id="next">⏭</button>
+    <button id="addm">＋</button>
+    <button id="expand" title="dj pult">⤢</button>
+  </div>
+  <div class="dj" id="dj">
+    <div class="rainbow-frame"></div>
+    <div class="row">
+      <span class="labels">bass</span><input class="slider" id="eqLow"  type="range" min="-20" max="20" value="0">
+    </div>
+    <div class="row">
+      <span class="labels">mid</span><input class="slider" id="eqMid"  type="range" min="-20" max="20" value="0">
+    </div>
+    <div class="row">
+      <span class="labels">high</span><input class="slider" id="eqHigh" type="range" min="-20" max="20" value="0">
+    </div>
+    <div class="row">
+      <span class="labels">filter</span>
+      <div class="chip" data-f="none">clean</div>
+      <div class="chip" data-f="robot">robot</div>
+      <div class="chip" data-f="ghost">ghost</div>
+      <div class="chip" data-f="deep">deep</div>
+    </div>
+    <div class="row" style="flex:1;min-height:0">
+      <div class="voiceList" id="voiceList"><div style="opacity:.6;text-align:center;padding:14px 0">no voice clips yet</div></div>
+    </div>
+    <div class="row">
+      <button class="bigbtn" id="recBtn">🎙 hold to record voice</button>
+    </div>
+  </div>
+  <div class="seek"><i id="bar"></i></div>
+</div>
+
+<div id="mbox"><div class="mbox-ring"></div></div>
+
+<div id="exOv">
+  <div class="exPanel">
+    <h3>⤓ Export / share</h3>
+    <button id="exTxt">📄 transcript (txt)</button>
+    <button id="exJson">🧾 settings (json)</button>
+    <button id="exZip">📦 full pack (zip)</button>
+    <button class="ghost" id="exClose">close</button>
+    <small>Rabbit = app · fish = sticker · bird = foil</small>
+  </div>
+</div>
+
+<div class="modal" id="card">
+  <div class="holo">
+    <div class="suit l">♥</div><div class="suit r">♠</div>
+    <div class="pic" id="cPic">🐰</div>
+    <textarea id="cTxt" placeholder="Name · role · voice · secret…"></textarea>
+    <div class="bar">
+      <button id="cImg">🖼 pic</button>
+      <button id="cSave">save</button>
+      <button id="cClose">close</button>
+    </div>
+  </div>
+</div>
+
+<audio id="au"></audio>
+<input id="fAudio" type="file" multiple accept="audio/*,video/*">
+<input id="fLoad"  type="file" accept=".json,.zip">
+<input id="fImg"   type="file" accept="image/*">
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+/* ============================================================
+   HOLO RABBIT OS v0.3
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const USERNAME = 'worldpeacebtn';
+const state = {
+  repos: JSON.parse(localStorage.getItem('holo.repos')||'null'),
+  openRepo: null,
+  cachedFiles: {},
+  items: JSON.parse(localStorage.getItem('holo.items')||'[]'),
+  foils: JSON.parse(localStorage.getItem('holo.foils')||'[]'),
+  cardSets: JSON.parse(localStorage.getItem('holo.sets')||'{}'),
+  playlist: [], voices: [], ti: 0,
+  theme: localStorage.getItem('holo.theme') || 'twilight',
+  edit: false, mini: false, sel: null, mode: null,
+  filter: 'none'
+};
+const saveAll = () => {
+  localStorage.setItem('holo.items', JSON.stringify(state.items));
+  localStorage.setItem('holo.foils', JSON.stringify(state.foils));
+  localStorage.setItem('holo.sets', JSON.stringify(state.cardSets));
+  if(state.repos) localStorage.setItem('holo.repos', JSON.stringify(state.repos));
+};
+const toast = t => { const e=$('#toast'); e.textContent=t; e.classList.add('on');
+  clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),1600); };
+
+/* ---------- THEME ---------- */
+const THEMES = ['twilight','day','sun','night'];
+const THEME_ICON = {twilight:'🌆',day:'☀️',sun:'🔥',night:'❄️'};
+function applyTheme(t){
+  state.theme = t; document.body.dataset.theme = t;
+  $('#themeBtn').textContent = THEME_ICON[t];
+  localStorage.setItem('holo.theme', t);
+  buildFX();
+}
+$('#themeBtn').onclick = () => {
+  const i = THEMES.indexOf(state.theme);
+  applyTheme(THEMES[(i+1)%THEMES.length]);
+};
+$('#bTheme').onclick = () => $('#themeBtn').click();
+applyTheme(state.theme);
+
+/* ---------- FX (fire / snow) ---------- */
+function buildFX(){
+  const fire = $('#firelayer'); fire.innerHTML='';
+  const snow = $('#snowlayer'); snow.innerHTML='';
+  if(state.theme==='sun'){
+    for(let i=0;i<40;i++){
+      const a=document.createElement('div'); a.className='ash';
+      const s=2+Math.random()*5;
+      a.style.width=s+'px'; a.style.height=s+'px';
+      a.style.left=(Math.random()*100)+'vw';
+      a.style.bottom='-10vh';
+      a.style.animationDuration=(6+Math.random()*10)+'s';
+      a.style.animationDelay=(-Math.random()*10)+'s';
+      fire.appendChild(a);
+    }
+  }
+  if(state.theme==='night'){
+    for(let i=0;i<50;i++){
+      const s=document.createElement('div'); s.className='snow';
+      s.textContent='❄';
+      s.style.left=(Math.random()*100)+'vw';
+      s.style.top='-10vh';
+      s.style.fontSize=(8+Math.random()*12)+'px';
+      s.style.opacity=(.4+Math.random()*.6).toFixed(2);
+      s.style.animationDuration=(8+Math.random()*10)+'s';
+      s.style.animationDelay=(-Math.random()*10)+'s';
+      snow.appendChild(s);
+    }
+  }
+}
+
+/* ---------- LAZY REPO LIST ---------- */
+async function loadRepos(force){
+  const decks=$('#decks');
+  if(state.repos && !force){ renderDecks(); return; }
+  decks.innerHTML = `<div style="margin:auto;font-size:12px;opacity:.7;padding:20px">⏳ loading repos…</div>`;
+  try{
+    const r = await fetch(`https://api.github.com/users/${USERNAME}/repos?per_page=100&sort=updated`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const repos = await r.json();
+    if(!Array.isArray(repos)) throw new Error('bad');
+    state.repos = repos.map(rp=>{
+      let base = rp.homepage;
+      if(!base || !base.startsWith('http')) base = `https://${USERNAME}.github.io/${rp.name}`;
+      base = base.replace(/\/+$/,'');
+      return { name: rp.name, base, desc: rp.description||'' };
+    });
+    saveAll(); renderDecks();
+  }catch(e){
+    decks.innerHTML = `<div style="margin:auto;font-size:12px;opacity:.85;padding:20px;color:#f0883e">❌ ${e.message}<br>tap ⟲ to retry</div>`;
+  }
+}
+$('#bReset').onclick = () => { localStorage.clear(); location.reload(); };
+
+/* ---------- DECK CAROUSEL ---------- */
+function renderDecks(){
+  const d=$('#decks'); d.innerHTML='';
+  if(!state.repos || !state.repos.length){ return; }
+  state.repos.forEach((rp,i)=>{
+    const slot=document.createElement('div'); slot.className='deck-slot';
+    const deck=document.createElement('div'); deck.className='deck';
+    // 5 fanned card backs
+    for(let k=0;k<5;k++){
+      const c=document.createElement('div'); c.className='dcard';
+      if(k===2){ // front card shows content
+        c.innerHTML = `<div><div class="emo">${pickEmoji(rp.name)}</div>
+          <div class="name">${esc(rp.name)}</div></div>`;
+      }
+      deck.appendChild(c);
+    }
+    slot.appendChild(deck);
+    slot.onclick = () => openDeck(rp);
+    d.appendChild(slot);
+  });
+}
+function pickEmoji(s){
+  const set=['📁','🎴','🌐','✨','🧡','🎮','📖','🎵','🌀'];
+  let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))>>>0;
+  return set[h%set.length];
+}
+const esc = s => String(s).replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+/* ---------- OPEN DECK (music-box → holo stage) ---------- */
+async function openDeck(rp){
+  const mb=$('#mbox'); mb.classList.add('on');
+  setTimeout(()=>mb.classList.remove('on'),1500);
+  // fetch contents once per repo
+  if(!state.cachedFiles[rp.name]){
+    try{
+      const r = await fetch(`https://api.github.com/repos/${USERNAME}/${rp.name}/contents/`);
+      if(!r.ok) state.cachedFiles[rp.name] = [];
+      else {
+        const files = await r.json();
+        state.cachedFiles[rp.name] = Array.isArray(files) ? files.filter(f =>
+          f.type==='file' && (f.name.endsWith('.html')||f.name.endsWith('.htm'))
+        ) : [];
+      }
+    }catch(e){ state.cachedFiles[rp.name] = []; }
+  }
+  state.openRepo = rp;
+  renderCardStage(rp, state.cachedFiles[rp.name]);
+  $('#stageWrap').classList.add('on');
+}
+function renderCardStage(rp, files){
+  $('#stageTitle').textContent = '🎴 '+rp.name;
+  const rail=$('#cardRail'); rail.innerHTML='';
+  if(!files || !files.length){
+    rail.innerHTML='<div style="margin:auto;padding:20px;font-size:12px;opacity:.7">no html files</div>';
+    return;
+  }
+  // check for saved set (custom order)
+  const set = state.cardSets[rp.name];
+  const ordered = set
+    ? set.map(n=>files.find(f=>f.name===n)).filter(Boolean)
+    : files;
+  ordered.forEach(f=>{
+    const c=document.createElement('div'); c.className='hcard';
+    c.innerHTML = `<div class="emo">🌐</div><div class="name">${esc(f.name)}</div>
+      <div class="kind">html</div>`;
+    c.onclick = () => { if(!c._dragged) openFile(rp, f); };
+    makeCardDraggable(c, rp);
+    rail.appendChild(c);
+  });
+}
+function openFile(rp, f){
+  const url = `${rp.base}/${f.path}`;
+  const w = window.open('','_blank');
+  if(!w){ toast('popup blocked'); return; }
+  w.document.title = f.name;
+  w.document.body.style.margin='0';
+  const ifr=w.document.createElement('iframe');
+  ifr.src=url; ifr.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0';
+  w.document.body.appendChild(ifr);
+}
+function makeCardDraggable(el, rp){
+  let down=false, sx=0, sy=0, idx=0;
+  el.addEventListener('pointerdown',e=>{
+    down=true; sx=e.clientX; sy=e.clientY;
+    el.classList.add('dragging'); el._dragged=false;
+    el.setPointerCapture(e.pointerId);
+    const rail=$('#cardRail');
+    idx = [...rail.children].indexOf(el);
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!down) return;
+    const dx=e.clientX-sx;
+    el.style.transform = `translate(${dx}px,-12px) scale(1.05) rotate(${dx*0.05}deg)`;
+    if(Math.abs(dx)>8) el._dragged=true;
+    // swap when passing neighbour midpoint
+    const rail=$('#cardRail');
+    const siblings=[...rail.children].filter(c=>c!==el);
+    const r=el.getBoundingClientRect();
+    const cx=r.left+r.width/2;
+    siblings.forEach(sib=>{
+      const sr=sib.getBoundingClientRect();
+      if(cx>sr.left && cx<sr.right && Math.abs(sib.offsetLeft-el.offsetLeft)<300){
+        const sibIdx=[...rail.children].indexOf(sib);
+        if(sibIdx>idx){ rail.insertBefore(el, sib.nextSibling); idx=sibIdx; }
+        else if(sibIdx<idx){ rail.insertBefore(el, sib); idx=sibIdx; }
+      }
+    });
+  });
+  el.addEventListener('pointerup',()=>{
+    down=false; el.classList.remove('dragging'); el.style.transform='';
+    setTimeout(()=>el._dragged=false, 100);
+  });
+}
+$('#backDecks').onclick = () => {
+  $('#stageWrap').classList.remove('on');
+  state.openRepo=null;
+};
+$('#saveSet').onclick = () => {
+  if(!state.openRepo) return;
+  const rail=$('#cardRail');
+  const order=[...rail.children].map(c=>c.querySelector('.name')?.textContent).filter(Boolean);
+  state.cardSets[state.openRepo.name] = order;
+  saveAll(); toast('card set saved');
+};
+
+/* ---------- STICKERS / NOTES ---------- */
+$('#bEdit').onclick = () => {
+  state.edit=!state.edit; document.body.classList.toggle('edit', state.edit);
+  $('#bEdit').classList.toggle('on', state.edit);
+  $('#panel').classList.toggle('on', state.edit);
+};
+$('#bSticker').onclick = () => { state.mode='sticker'; state.edit=true;
+  document.body.classList.add('edit'); $('#bEdit').classList.add('on');
+  $('#panel').classList.add('on');
+  toast('tap stage to drop 🐰'); };
+$('#bBubble').onclick = () => { state.mode='bubble'; state.edit=true;
+  document.body.classList.add('edit'); $('#bEdit').classList.add('on');
+  $('#panel').classList.add('on');
+  toast('tap stage to add note'); };
+
+$('#stage').addEventListener('pointerdown', e=>{
+  if(!state.edit || e.target!==$('#stage')) return;
+  const r=$('#stage').getBoundingClientRect();
+  const x=((e.clientX-r.left)/r.width*100).toFixed(2);
+  const y=((e.clientY-r.top)/r.height*100).toFixed(2);
+  if(state.mode==='sticker') addItem({type:'emoji', v:'🐰', x, y, size:16, rot:0});
+  if(state.mode==='bubble')  addItem({type:'bubble', v:'new note…', x, y, size:14, rot:0});
+});
+function addItem(o){ o.id='i'+Date.now()+Math.random().toString(36).slice(2,5);
+  state.items.push(o); renderItems(); saveAll(); }
+function renderItems(){
+  const s=$('#stage'); s.innerHTML='';
+  state.items.forEach(o=>{
+    const d=document.createElement('div'); d.className='item'; d.dataset.id=o.id;
+    d.style.left=o.x+'%'; d.style.top=o.y+'%';
+    d.style.transform=`translate(-50%,-50%) rotate(${o.rot}deg)`;
+    if(o.type==='bubble')
+      d.innerHTML=`<div class="bubble" style="font-size:${o.size*0.85}px">${esc(o.v)}</div>`;
+    else if(o.src)
+      { d.style.width=o.size+'%'; d.innerHTML=`<img src="${o.src}">`; }
+    else
+      d.innerHTML=`<div style="font-size:${o.size*2.6}px;line-height:1">${o.v||'🐰'}</div>`;
+    makeItemDraggable(d, o);
+    d.onpointerdown = () => selectItem(o);
+    s.appendChild(d);
+  });
+}
+function makeItemDraggable(el,o){
+  let on=false, sx=0, sy=0, ox=0, oy=0, r=null;
+  el.addEventListener('pointerdown',e=>{
+    if(!state.edit) return;
+    on=true; el.setPointerCapture(e.pointerId);
+    r=$('#stage').getBoundingClientRect();
+    sx=e.clientX; sy=e.clientY; ox=parseFloat(o.x); oy=parseFloat(o.y);
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!on) return;
+    o.x=(ox+(e.clientX-sx)/r.width*100).toFixed(2);
+    o.y=(oy+(e.clientY-sy)/r.height*100).toFixed(2);
+    el.style.left=o.x+'%'; el.style.top=o.y+'%';
+  });
+  el.addEventListener('pointerup',()=>{ on=false; saveAll(); });
+}
+function selectItem(o){
+  state.sel=o; $('#panel').classList.add('on');
+  $('#psel').textContent = o.type+' '+o.id.slice(-3);
+  $('#psize').value=o.size; $('#prot').value=o.rot;
+}
+['psize','prot'].forEach(id=>{
+  $('#'+id).oninput = e => {
+    const o=state.sel; if(!o) return;
+    const k={psize:'size',prot:'rot'}[id];
+    o[k]=parseFloat(e.target.value); renderItems(); selectItem(o); saveAll();
+  };
+});
+$('#pdel').onclick = () => { state.items=state.items.filter(x=>x!==state.sel);
+  state.sel=null; $('#panel').classList.remove('on'); renderItems(); saveAll(); };
+
+/* ---------- CHARACTER CARD ---------- */
+$('#bChar').onclick = () => $('#card').classList.add('on');
+$('#cClose').onclick = () => $('#card').classList.remove('on');
+$('#cImg').onclick = () => $('#fImg').click();
+$('#fImg').onchange = e => {
+  const f=e.target.files[0]; if(!f) return;
+  $('#cPic').innerHTML=`<img src="${URL.createObjectURL(f)}">`;
+  e.target.value='';
+};
+$('#cSave').onclick = () => {
+  const t=$('#cTxt').value.trim()||'unnamed';
+  state.cardSets['__char_'+Date.now()] = { name:t.split('\n')[0].slice(0,20) };
+  saveAll(); $('#card').classList.remove('on'); toast('saved');
+};
+
+/* ---------- AUDIO / DJ PULT ---------- */
+const au=$('#au');
+let actx=null, srcNode=null, anNode=null, lowEQ=null, midEQ=null, highEQ=null, master=null;
+function initAudio(){
+  if(actx) return;
+  actx=new (window.AudioContext||window.webkitAudioContext)();
+  srcNode=actx.createMediaElementSource(au);
+  lowEQ=actx.createBiquadFilter();  lowEQ.type='lowshelf';  lowEQ.frequency.value=200;
+  midEQ=actx.createBiquadFilter();  midEQ.type='peaking';   midEQ.frequency.value=1000; midEQ.Q.value=1;
+  highEQ=actx.createBiquadFilter(); highEQ.type='highshelf'; highEQ.frequency.value=4000;
+  anNode=actx.createAnalyser(); anNode.fftSize=128;
+  master=actx.createGain();
+  srcNode.connect(lowEQ).connect(midEQ).connect(highEQ).connect(anNode).connect(master).connect(actx.destination);
+  pulseOrb();
+}
+['eqLow','eqMid','eqHigh'].forEach(id=>{
+  $('#'+id).oninput = e => {
+    if(!actx) initAudio();
+    const v=parseFloat(e.target.value);
+    if(id==='eqLow')  lowEQ.gain.value=v;
+    if(id==='eqMid')  midEQ.gain.value=v;
+    if(id==='eqHigh') highEQ.gain.value=v;
+  };
+});
+document.querySelectorAll('.dj .chip[data-f]').forEach(c=>{
+  c.onclick = () => {
+    document.querySelectorAll('.dj .chip[data-f]').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on'); state.filter=c.dataset.f;
+  };
+});
+document.querySelector('.dj .chip[data-f="none"]').classList.add('on');
+
+$('#addm').onclick = () => $('#fAudio').click();
+$('#fAudio').onchange = e => {
+  [...e.target.files].forEach(f=>{
+    const kind = f.type.startsWith('video')?'video':'audio';
+    state.playlist.push({name:f.name, url:URL.createObjectURL(f), kind, blob:f});
+  });
+  if(state.playlist.length && !au.src) load(0);
+  toast(state.playlist.length+' tracks');
+  e.target.value='';
+};
+function load(i){
+  if(!state.playlist.length) return;
+  state.ti=(i+state.playlist.length)%state.playlist.length;
+  const t=state.playlist[state.ti];
+  $('#title').textContent=t.name.replace(/\.[^.]+$/,'');
+  $('#sub').textContent=(state.ti+1)+' / '+state.playlist.length+' · '+t.kind;
+  const cov=$('#cov'); cov.innerHTML='';
+  if(t.kind==='video'){
+    const v=document.createElement('video'); v.src=t.url; v.muted=true; v.playsInline=true;
+    v.autoplay=true; v.loop=true; cov.appendChild(v);
+  } else cov.textContent = ['🐰','🧡','✨','🌙','🍊'][state.ti%5];
+  if(t.kind==='audio') au.src=t.url;
+}
+$('#play').onclick = () => {
+  if(!actx) initAudio();
+  if(au.paused){ au.play(); $('#play').textContent='⏸'; } else { au.pause(); $('#play').textContent='▶'; }
+};
+$('#next').onclick = () => load(state.ti+1);
+$('#prev').onclick = () => load(state.ti-1);
+au.ontimeupdate = () => { if(au.duration) $('#bar').style.width=(au.currentTime/au.duration*100)+'%'; };
+au.onended = () => $('#next').click();
+
+// swipe skip
+let dx0=null;
+$('#dock').addEventListener('pointerdown',e=>{ if(e.target.tagName==='BUTTON') return; dx0=e.clientX; });
+$('#dock').addEventListener('pointerup',e=>{
+  if(dx0===null) return; const d=e.clientX-dx0; dx0=null;
+  if(d<-50) $('#next').click(); else if(d>50) $('#prev').click();
+});
+$('#expand').onclick = () => {
+  const d=$('#dock'); d.classList.toggle('expanded');
+  $('#expand').textContent = d.classList.contains('expanded')?'⤡':'⤢';
+};
+
+/* ---------- VOICE RECORD + FILTERS ---------- */
+let mediaRec=null, chunks=[];
+$('#recBtn').onpointerdown = async e => {
+  e.preventDefault();
+  if(mediaRec && mediaRec.state==='recording') return;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRec = new MediaRecorder(stream); chunks=[];
+    mediaRec.ondataavailable = ev => chunks.push(ev.data);
+    mediaRec.onstop = () => {
+      stream.getTracks().forEach(t=>t.stop());
+      const blob = new Blob(chunks, {type:'audio/webm'});
+      state.voices.push({url:URL.createObjectURL(blob), blob, filter:state.filter, name:'voice '+(state.voices.length+1)});
+      renderVoices();
+      toast('voice clip added');
+    };
+    mediaRec.start();
+    $('#recBtn').classList.add('rec');
+    $('#recBtn').textContent='🎙 recording…';
+  }catch(e){ toast('mic blocked'); }
+};
+$('#recBtn').onpointerup = () => {
+  if(mediaRec && mediaRec.state==='recording'){
+    mediaRec.stop();
+    $('#recBtn').classList.remove('rec');
+    $('#recBtn').textContent='🎙 hold to record voice';
+  }
+};
+function renderVoices(){
+  const v=$('#voiceList'); v.innerHTML='';
+  if(!state.voices.length){
+    v.innerHTML='<div style="opacity:.6;text-align:center;padding:14px 0">no voice clips yet</div>';
+    return;
+  }
+  state.voices.forEach((vc,i)=>{
+    const row=document.createElement('div'); row.className='vrow';
+    row.innerHTML = `<span>🎙 ${esc(vc.name)}</span>
+      <span style="flex:1"></span>
+      <span style="font-size:10px;opacity:.7">${vc.filter}</span>
+      <button title="play">▶</button>
+      <button title="del">✕</button>`;
+    row.children[2].onclick = () => playVoice(vc);
+    row.children[3].onclick = () => { state.voices.splice(i,1); renderVoices(); };
+    v.appendChild(row);
+  });
+}
+function playVoice(vc){
+  if(!actx) initAudio();
+  const el=new Audio(vc.url);
+  el.play();
+}
+renderVoices();
+
+/* ---------- AUDIO-REACTIVE ORB ---------- */
+function pulseOrb(){
+  const data=new Uint8Array(anNode.frequencyBinCount);
+  const orb=$('#orb');
+  (function loop(){
+    anNode.getByteFrequencyData(data);
+    const avg=data.reduce((a,b)=>a+b,0)/data.length/255;
+    document.documentElement.style.setProperty('--pulse',(0.2+avg*1.0).toFixed(3));
+    orb.style.transform=`scale(${1+avg*0.9})`;
+    requestAnimationFrame(loop);
+  })();
+}
+
+/* ---------- HUD mini ---------- */
+$('#bMini').onclick = () => {
+  state.mini=!state.mini;
+  document.querySelectorAll('.hudGroup').forEach(g=>g.classList.toggle('mini',state.mini));
+  $('#bMini').textContent = state.mini ? '◻' : '▫';
+};
+
+/* ---------- EXPORT OVERLAY ---------- */
+const exOv=$('#exOv');
+// export trigger moves to top button "⤓"
+document.querySelector('#top').insertAdjacentHTML('beforeend',
+  '<button id="exTrigger" title="export">⤓</button>');
+$('#exTrigger').onclick = () => exOv.classList.add('on');
+$('#exClose').onclick = () => exOv.classList.remove('on');
+
+function coord(i){ return `X${i%9}Y${Math.floor(i/9)%9}Z${Math.floor(i/81)}`; }
+$('#exTxt').onclick = () => {
+  const lines=['=== HOLO RABBIT OS v0.3 · TRANSCRIPT ===','saved: '+new Date().toISOString(),'',
+    '--- theme ---', document.body.dataset.theme,'', '--- stage items ---'];
+  state.items.forEach((o,i)=>lines.push(
+    `${coord(i)} fish=${o.type} x=${o.x} y=${o.y} size=${o.size} rot=${o.rot} v="${(o.v||'').replace(/"/g,"'")}"`));
+  lines.push('','--- card sets ---');
+  Object.entries(state.cardSets).forEach(([k,v])=>{
+    lines.push(`${k} = ${JSON.stringify(v)}`);
+  });
+  download('holo_transcript.txt', new Blob([lines.join('\n')],{type:'text/plain'}));
+  toast('txt saved');
+};
+$('#exJson').onclick = () => {
+  const json = {format:'HOLO-RABBIT', version:'0.3', saved:new Date().toISOString(),
+    theme: document.body.dataset.theme, items: state.items, foils: state.foils,
+    cardSets: state.cardSets,
+    legend:{rabbit:'app',fish:'sticker',bird:'foil'}};
+  download('holo_settings.json', new Blob([JSON.stringify(json,null,1)],{type:'application/json'}));
+  toast('json saved');
+};
+$('#exZip').onclick = async () => {
+  if(!window.JSZip) return toast('JSZip offline');
+  const zip=new JSZip();
+  const json = {format:'HOLO-RABBIT', version:'0.3', saved:new Date().toISOString(),
+    items: state.items, foils: state.foils, cardSets: state.cardSets};
+  state.playlist.forEach((t,i)=>zip.file(`media/${coord(i)}_${t.name}`, t.blob));
+  state.voices.forEach((v,i)=>zip.file(`voices/${coord(i)}_${v.name}.webm`, v.blob));
+  zip.file('HOLO.json', JSON.stringify(json,null,1));
+  const out = await zip.generateAsync({type:'blob'});
+  download('holo_pack.zip', out);
+  toast('zip saved');
+};
+function download(name,data){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(data); a.download=name; a.click();
+}
+
+/* ---------- CLOCK ---------- */
+setInterval(()=>{
+  const d=new Date();
+  $('#clock').textContent = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+},1000);
+
+/* ---------- BOOT ---------- */
+loadRepos();
+renderItems();
+renderVoices();
+</script>
+</body>
+</html>
