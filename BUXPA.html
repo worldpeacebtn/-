@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>Holo Hive · Mobile Fix</title>
+<style>
+:root{
+  --o:#ff8a1f; --y:#ffd23f; --gold:#ffcc55;
+  --ink:#ffe4c0; --inkSoft:#ffb070;
+  --bg0:#0a0400; --bg1:#180800;
+  --pulse:.35;
+  --rainbow:conic-gradient(from 0deg,#ff4d4d,#ffb84d,#ffee4d,#4dff88,#4dd2ff,#a64dff,#ff4dd2,#ff4d4d);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;
+  font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--ink);background:var(--bg0);overscroll-behavior:none;
+  /* KEY FIX: manipulation blocks pointer events on draggable children */
+  touch-action: manipulation;
+  user-select:none;-webkit-user-select:none}
+
+#bg{position:fixed;inset:0;z-index:0;
+  background:radial-gradient(80% 60% at 50% 0%, var(--bg1) 0%, var(--bg0) 70%)}
+#bgGrid{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,150,60,calc(.05 + var(--pulse)*.14)) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,150,60,calc(.05 + var(--pulse)*.14)) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(circle at center,#000 20%,transparent 100%);
+  -webkit-mask-image:radial-gradient(circle at center,#000 20%,transparent 100%)}
+#grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.08;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='.85'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
+
+/* ================= STAGE ================= */
+#stage{position:fixed;inset:0;z-index:10;overflow:hidden;
+  /* KEY FIX: stage must capture touch, not body scroll */
+  touch-action:none}
+#world{position:absolute;inset:0;overflow:hidden;touch-action:none}
+
+/* ================= HIVE CHIP (bottom-right) ================= */
+#hiveToggle{position:fixed;
+  right:max(12px, env(safe-area-inset-right));
+  /* KEY FIX: sit above iPhone home indicator */
+  bottom:max(24px, calc(env(safe-area-inset-bottom) + 12px));
+  width:56px;height:56px;z-index:80;
+  display:grid;place-items:center;font-size:22px;color:var(--ink);
+  background:linear-gradient(155deg,rgba(255,200,120,.55),rgba(255,120,40,.3));
+  border:0;cursor:pointer;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  box-shadow:inset 0 0 0 2px rgba(255,220,150,.9),
+    0 0 24px rgba(255,150,60,.7),
+    inset 0 0 20px rgba(255,140,220,.4);
+  /* KEY FIX: none = capture all touches without scroll hijack */
+  touch-action:none;
+  backdrop-filter:blur(8px)}
+#hiveToggle:active{transform:scale(.92)}
+#hiveToggle::after{content:"";position:absolute;inset:0;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  padding:2px;background:var(--rainbow);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  animation:rbSpin 8s linear infinite;pointer-events:none}
+@keyframes rbSpin{to{filter:hue-rotate(360deg)}}
+
+/* ================= VERTICAL HIVE COLUMN ================= */
+/* KEY FIX: tall column above toggle, not radial offsets — touches always land */
+#hive{position:fixed;
+  right:max(12px, env(safe-area-inset-right));
+  bottom:calc(max(24px, env(safe-area-inset-bottom) + 12px) + 68px);
+  display:flex;flex-direction:column-reverse;gap:8px;
+  z-index:79;
+  opacity:0;pointer-events:none;
+  transform:translateY(20px);
+  transition:opacity .25s,transform .25s}
+#hive.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+#hive .hex{width:52px;height:52px;display:grid;place-items:center;font-size:20px;
+  background:linear-gradient(155deg,rgba(255,200,120,.4),rgba(255,120,40,.15));
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  box-shadow:inset 0 0 0 1.5px rgba(255,220,150,.85),0 0 14px rgba(255,150,60,.5);
+  touch-action:none;cursor:pointer;color:var(--ink);
+  backdrop-filter:blur(10px)}
+#hive .hex:active{transform:scale(.9)}
+#hive .hex svg,#hive .hex img{width:60%;height:60%;object-fit:contain}
+
+/* ================= TOKEN / NOTE ================= */
+.token{position:absolute;width:52px;height:52px;border-radius:14px;
+  background:linear-gradient(155deg,rgba(255,220,140,.35),rgba(255,140,60,.1));
+  border:2px solid var(--gold);display:grid;place-items:center;font-size:28px;
+  box-shadow:0 0 0 2px rgba(0,0,0,.3),0 6px 20px rgba(255,150,60,.5);
+  cursor:grab;z-index:20;
+  transform:translate(-50%,-50%);
+  /* KEY FIX for iOS drag */
+  touch-action:none;
+  -webkit-user-drag:none}
+.token.selected{box-shadow:0 0 0 3px var(--gold),0 0 30px rgba(255,204,85,.9)}
+.token .tag{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);
+  font-size:9px;font-weight:800;color:var(--gold);text-shadow:0 0 6px #000;
+  background:rgba(0,0,0,.55);padding:1px 6px;border-radius:6px;white-space:nowrap}
+.token img{width:100%;height:100%;object-fit:contain;border-radius:12px;pointer-events:none}
+
+.noteCard{position:absolute;width:130px;min-height:70px;padding:8px 10px 22px;
+  border-radius:12px;background:#ffe9a8;color:#2a0a00;font-size:11px;font-weight:700;
+  cursor:grab;z-index:15;
+  box-shadow:0 6px 20px rgba(0,0,0,.4);
+  transform:translate(-50%,-50%);
+  /* KEY FIX */
+  touch-action:none}
+.noteCard textarea{width:100%;border:0;background:transparent;color:inherit;
+  font:inherit;font-size:11px;resize:none;outline:none;min-height:36px;
+  touch-action:auto;-webkit-user-select:text;user-select:text}
+
+/* ================= OVERLAYS ================= */
+.ov{position:fixed;inset:0;z-index:90;display:none;place-items:center;
+  background:rgba(0,0,0,.78);backdrop-filter:blur(10px);padding:14px;
+  /* KEY FIX: overlay needs to receive touches */
+  touch-action:auto}
+.ov.on{display:grid}
+.ovPanel{width:min(94vw,540px);max-height:82vh;overflow-y:auto;padding:16px;border-radius:18px;
+  background:linear-gradient(160deg,rgba(35,15,0,.96),rgba(15,6,0,.96));
+  border:1px solid rgba(255,150,60,.55);
+  display:flex;flex-direction:column;gap:8px;color:var(--ink);
+  -webkit-overflow-scrolling:touch}
+.ovPanel button{padding:14px;border:0;border-radius:12px;font:inherit;font-weight:800;
+  font-size:13px;cursor:pointer;
+  background:linear-gradient(180deg,var(--y),var(--o));color:#3a1e00;
+  touch-action:manipulation}
+.ovPanel button.ghost{background:rgba(255,255,255,.08);color:var(--ink);
+  box-shadow:inset 0 0 0 1px rgba(255,150,60,.5)}
+.ovPanel .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.ovPanel .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ovPanel h3{margin:0;font-size:15px;color:var(--gold);font-weight:800}
+
+/* ================= UPLOAD CHIP (left mid) ================= */
+#uploadBtn{position:fixed;
+  left:max(12px, env(safe-area-inset-left));
+  top:50%;transform:translateY(-50%);
+  width:52px;height:52px;z-index:75;
+  display:grid;place-items:center;font-size:22px;color:var(--ink);
+  background:linear-gradient(155deg,rgba(255,200,120,.4),rgba(255,120,40,.15));
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  box-shadow:inset 0 0 0 1.5px rgba(255,220,150,.85),0 0 14px rgba(255,150,60,.5);
+  border:0;cursor:pointer;touch-action:none;backdrop-filter:blur(10px)}
+#uploadBtn:active{transform:translateY(-50%) scale(.92)}
+
+#toast{position:fixed;z-index:120;left:50%;bottom:100px;transform:translateX(-50%);
+  padding:10px 16px;border-radius:12px;background:rgba(20,8,0,.95);
+  color:var(--gold);font-size:12px;font-weight:800;opacity:0;
+  transition:opacity .25s;pointer-events:none;border:1px solid rgba(255,150,60,.5);
+  max-width:80vw;text-align:center}
+#toast.on{opacity:1}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<div id="bgGrid"></div>
+<div id="grain"></div>
+
+<div id="stage"><div id="world"></div></div>
+
+<!-- Single upload chip -->
+<button id="uploadBtn" aria-label="upload">⬆</button>
+
+<!-- Vertical hive column + main chip -->
+<div id="hive">
+  <div class="hex" data-app="lab">🔬</div>
+  <div class="hex" data-app="cam">📷</div>
+  <div class="hex" data-app="view">🖼</div>
+  <div class="hex" data-app="diary">📖</div>
+  <div class="hex" data-app="char">♥</div>
+  <div class="hex" data-app="quest">🗺</div>
+  <div class="hex" data-app="menu">◈</div>
+</div>
+<button id="hiveToggle" aria-label="menu">◈</button>
+
+<!-- Menu overlay -->
+<div class="ov" id="menuOv">
+  <div class="ovPanel">
+    <h3>◈ Hive</h3>
+    <div class="grid2">
+      <button id="mAddToken">◉ Token</button>
+      <button id="mAddNote">📝 Note</button>
+      <button id="mUpload">⬆ Upload</button>
+      <button id="mCenter">◎ Center</button>
+      <button id="mExport">⤓ Export</button>
+      <button id="mClear">✕ Clear</button>
+    </div>
+    <div class="grid3" style="margin-top:8px">
+      <button data-suit="hearts" class="ghost">♥</button>
+      <button data-suit="diamonds" class="ghost">♦</button>
+      <button data-suit="spades" class="ghost">♠</button>
+      <button data-suit="clubs" class="ghost">♣</button>
+      <button data-suit="gold" class="ghost">★</button>
+      <button id="mClose" class="ghost">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export overlay -->
+<div class="ov" id="exOv">
+  <div class="ovPanel">
+    <h3>⤓ Export</h3>
+    <button id="exTxt">📄 transcript</button>
+    <button id="exJson">🧾 settings</button>
+    <button class="ghost" id="exClose">close</button>
+  </div>
+</div>
+
+<!-- Preview overlay -->
+<div class="ov" id="pvOv">
+  <div class="ovPanel">
+    <h3>🖼 Preview</h3>
+    <div id="pvBody" style="background:#000;border-radius:12px;height:60vh;display:grid;
+      place-items:center;overflow:hidden"></div>
+    <button class="ghost" id="pvClose">close</button>
+  </div>
+</div>
+
+<input id="fUp" type="file" multiple accept="*/*">
+<div id="toast"></div>
+
+<script>
+/* =================================================================
+   HOLO HIVE — Mobile Touch Fix
+   ================================================================= */
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const toast = t => { const e=$('#toast'); e.textContent=t; e.classList.add('on');
+  clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),1600); };
+
+const state = {
+  tokens: JSON.parse(localStorage.getItem('hive.tokens')||'[]'),
+  notes:  JSON.parse(localStorage.getItem('hive.notes')||'[]'),
+  hiveOpen: false
+};
+function save(){
+  localStorage.setItem('hive.tokens', JSON.stringify(state.tokens));
+  localStorage.setItem('hive.notes', JSON.stringify(state.notes));
+}
+
+/* ---------- Hive open / close ---------- */
+$('#hiveToggle').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  state.hiveOpen = !state.hiveOpen;
+  $('#hive').classList.toggle('open', state.hiveOpen);
+  $('#hiveToggle').textContent = state.hiveOpen ? '✕' : '◈';
+});
+
+/* ---------- Hive chip actions ---------- */
+$$('#hive .hex').forEach(el => {
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const app = el.dataset.app;
+    if(app === 'lab')   toast('Lab · coming');
+    if(app === 'cam')   launchCam();
+    if(app === 'view')  toast('Viewer · coming');
+    if(app === 'diary') toast('Diary · coming');
+    if(app === 'char')  addTokenAtCenter('👤', 'hero');
+    if(app === 'quest') toast('Quest · coming');
+    if(app === 'menu')  $('#menuOv').classList.add('on');
+    // auto-close hive on selection
+    state.hiveOpen = false;
+    $('#hive').classList.remove('open');
+    $('#hiveToggle').textContent = '◈';
+  });
+});
+
+/* ---------- Menu actions ---------- */
+$('#mAddToken').addEventListener('pointerdown', e => { e.preventDefault(); addTokenAtCenter('🐰','new'); $('#menuOv').classList.remove('on'); });
+$('#mAddNote').addEventListener('pointerdown', e => { e.preventDefault(); addNoteAtCenter(); $('#menuOv').classList.remove('on'); });
+$('#mUpload').addEventListener('pointerdown', e => { e.preventDefault(); $('#fUp').click(); });
+$('#mCenter').addEventListener('pointerdown', e => { e.preventDefault(); toast('centered'); });
+$('#mExport').addEventListener('pointerdown', e => { e.preventDefault(); $('#exOv').classList.add('on'); });
+$('#mClear').addEventListener('pointerdown', e => { e.preventDefault();
+  state.tokens=[]; state.notes=[]; save(); renderAll(); toast('cleared');
+});
+$('#mClose').addEventListener('pointerdown', e => { e.preventDefault(); $('#menuOv').classList.remove('on'); });
+$$('[data-suit]').forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault();
+  state.notes.forEach(n => n.suit = b.dataset.suit); save(); renderAll();
+  toast('all → ' + b.dataset.suit);
+}));
+
+/* ---------- Upload chip ---------- */
+$('#uploadBtn').addEventListener('pointerdown', e => { e.preventDefault(); $('#fUp').click(); });
+
+/* ---------- File picker ---------- */
+$('#fUp').addEventListener('change', e => {
+  const files = [...e.target.files];
+  toast(files.length + ' file' + (files.length>1?'s':'') + ' loaded');
+  // quick preview first file
+  if(files[0]){
+    const url = URL.createObjectURL(files[0]);
+    const box = $('#pvBody'); box.innerHTML = '';
+    if(files[0].type.startsWith('image/')){ const im=new Image(); im.src=url; box.appendChild(im); }
+    else if(files[0].type.startsWith('video/')){ const v=document.createElement('video'); v.src=url; v.controls=true; v.autoplay=true; v.playsInline=true; box.appendChild(v); }
+    else if(files[0].type.startsWith('audio/')){ const a=document.createElement('audio'); a.src=url; a.controls=true; a.autoplay=true; a.style.width='90%'; box.appendChild(a); }
+    else box.innerHTML = '<div style="color:#fff;padding:20px;font-size:12px">'+files[0].name+'</div>';
+    $('#pvOv').classList.add('on');
+  }
+  e.target.value='';
+});
+
+/* ---------- Preview / Export overlays ---------- */
+$('#pvClose').addEventListener('pointerdown', e => { e.preventDefault(); $('#pvOv').classList.remove('on'); });
+$('#exClose').addEventListener('pointerdown', e => { e.preventDefault(); $('#exOv').classList.remove('on'); });
+$('#exTxt').addEventListener('pointerdown', e => { e.preventDefault();
+  const lines = state.tokens.map((t,i)=>`t${i} x=${t.x|0} y=${t.y|0} name=${t.name}`).join('\n');
+  const blob = new Blob([lines], {type:'text/plain'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hive.txt'; a.click();
+});
+$('#exJson').addEventListener('pointerdown', e => { e.preventDefault();
+  const blob = new Blob([JSON.stringify(state,null,1)], {type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hive.json'; a.click();
+});
+
+/* ---------- TOKEN ---------- */
+function addTokenAtCenter(emoji, name){
+  const r = $('#stage').getBoundingClientRect();
+  addToken({x:r.width/2, y:r.height/2, emoji, name});
+}
+function addToken({x, y, emoji='🐰', name=''}){
+  const t = {id:uid('t'), x, y, emoji, name};
+  state.tokens.push(t); save(); renderAll();
+}
+function renderTokens(){
+  $$('.token').forEach(e=>e.remove());
+  state.tokens.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'token';
+    el.dataset.id = t.id;
+    el.style.left = t.x + 'px';
+    el.style.top  = t.y + 'px';
+    el.textContent = t.emoji || '🐰';
+    if(t.name){
+      const tg = document.createElement('div'); tg.className='tag'; tg.textContent = t.name;
+      el.appendChild(tg);
+    }
+    wireTokenDrag(el, t);
+    el.addEventListener('pointerdown', e => { e.stopPropagation(); });
+    el.addEventListener('pointerup', e => {
+      if(!el._dragged){
+        $$('.token').forEach(x=>x.classList.remove('selected'));
+        el.classList.add('selected');
+      }
+    });
+    $('#world').appendChild(el);
+  });
+}
+
+/* ---------- TOKEN DRAG — real touch handlers ---------- */
+function wireTokenDrag(el, t){
+  let dragging = false, startX = 0, startY = 0, origX = 0, origY = 0;
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    el._dragged = false;
+    el.setPointerCapture(e.pointerId);
+    startX = e.clientX; startY = e.clientY;
+    origX = t.x; origY = t.y;
+    el.style.zIndex = 999;
+  });
+  el.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if(Math.hypot(dx, dy) > 5) el._dragged = true;
+    t.x = origX + dx;
+    t.y = origY + dy;
+    el.style.left = t.x + 'px';
+    el.style.top  = t.y + 'px';
+  });
+  el.addEventListener('pointerup', e => {
+    if(!dragging) return;
+    dragging = false;
+    el.style.zIndex = '';
+    // snap to 60px grid
+    t.x = Math.round(t.x/60)*60;
+    t.y = Math.round(t.y/60)*60;
+    el.style.left = t.x + 'px';
+    el.style.top  = t.y + 'px';
+    save();
+    setTimeout(()=>{ el._dragged = false; }, 80);
+  });
+  el.addEventListener('pointercancel', () => { dragging = false; el.style.zIndex=''; });
+}
+
+/* ---------- NOTE ---------- */
+function addNoteAtCenter(){
+  const r = $('#stage').getBoundingClientRect();
+  const n = {id:uid('n'), x:r.width/2, y:r.height/2, title:'note', body:'tap to edit', suit:'gold'};
+  state.notes.push(n); save(); renderAll();
+}
+function renderNotes(){
+  $$('.noteCard').forEach(e=>e.remove());
+  state.notes.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'noteCard';
+    el.dataset.suit = n.suit || 'gold';
+    el.style.left = n.x + 'px';
+    el.style.top  = n.y + 'px';
+    const suitCh = {hearts:'♥',diamonds:'♦',spades:'♠',clubs:'♣',gold:'★'}[n.suit||'gold'];
+    el.innerHTML = `<div style="font-size:14px">${suitCh} <b>${n.title}</b></div>
+      <textarea rows="2">${n.body}</textarea>`;
+    const ta = el.querySelector('textarea');
+    ta.addEventListener('input', () => { n.body = ta.value; save(); });
+    wireNoteDrag(el, n);
+    $('#world').appendChild(el);
+  });
+}
+function wireNoteDrag(el, n){
+  let dragging = false, startX=0, startY=0, origX=0, origY=0;
+  el.addEventListener('pointerdown', e => {
+    if(e.target.tagName === 'TEXTAREA') return;
+    e.preventDefault(); e.stopPropagation();
+    dragging = true;
+    el.setPointerCapture(e.pointerId);
+    startX = e.clientX; startY = e.clientY;
+    origX = n.x; origY = n.y;
+    el.style.zIndex = 999;
+  });
+  el.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    n.x = origX + (e.clientX - startX);
+    n.y = origY + (e.clientY - startY);
+    el.style.left = n.x + 'px';
+    el.style.top  = n.y + 'px';
+  });
+  el.addEventListener('pointerup', () => { dragging=false; el.style.zIndex=''; save(); });
+  el.addEventListener('pointercancel', () => { dragging=false; el.style.zIndex=''; });
+}
+
+/* ---------- CAMERA ---------- */
+async function launchCam(){
+  const full = document.createElement('div');
+  full.style.cssText = 'position:fixed;inset:0;z-index:95;background:#000;display:flex;flex-direction:column;touch-action:none';
+  full.innerHTML = `
+    <video autoplay playsinline muted style="flex:1;width:100%;object-fit:cover"></video>
+    <div style="padding:14px;display:flex;gap:8px;justify-content:center;background:rgba(0,0,0,.85)">
+      <button id="cfShot" style="padding:12px 20px;border:0;border-radius:12px;font-weight:800;background:linear-gradient(180deg,#ffd23f,#ff8a1f);color:#3a1e00;cursor:pointer">📸</button>
+      <button id="cfClose" style="padding:12px 20px;border:0;border-radius:12px;font-weight:800;background:rgba(255,255,255,.15);color:#fff;cursor:pointer">✕</button>
+    </div>`;
+  document.body.appendChild(full);
+  const v = full.querySelector('video');
+  let stream = null;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    v.srcObject = stream;
+  }catch(err){ toast('camera blocked: '+err.message); }
+  full.querySelector('#cfClose').addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    full.remove();
+  });
+  full.querySelector('#cfShot').addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if(!stream) return;
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    toast('📸 captured');
+  });
+}
+
+/* ---------- RENDER ALL ---------- */
+function renderAll(){ renderTokens(); renderNotes(); }
+
+/* ---------- BOOT ---------- */
+window.addEventListener('load', () => {
+  // Add a hero token on first run so something visible appears
+  if(!state.tokens.length){
+    const r = $('#stage').getBoundingClientRect();
+    addToken({x: r.width/2, y: r.height/2, emoji:'🐰', name:'hero'});
+  }
+  renderAll();
+});
+
+/* ---------- Prevent iOS pull-to-refresh ---------- */
+document.addEventListener('touchmove', e => {
+  if(e.target.closest('textarea')) return;
+  e.preventDefault();
+}, {passive:false});
+</script>
+</body>
+</html>
